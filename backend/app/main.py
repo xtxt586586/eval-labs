@@ -139,6 +139,7 @@ from app.api.rag_dataset_job import router as rag_dataset_job_router
 from app.api.blind_test import router as blind_test_router
 from app.api.observability import router as observability_router
 from app.api.calibration import router as calibration_router
+from app.api.agent_sandbox import router as agent_sandbox_router
 
 app.include_router(llm_config_router, prefix="/api")
 app.include_router(dataset_router, prefix="/api")
@@ -151,6 +152,7 @@ app.include_router(rag_dataset_job_router, prefix="/api")
 app.include_router(blind_test_router, prefix="/api")
 app.include_router(observability_router, prefix="/api")
 app.include_router(calibration_router, prefix="/api")
+app.include_router(agent_sandbox_router, prefix="/api")
 
 # Static file serving for uploads
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)

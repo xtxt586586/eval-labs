@@ -5,6 +5,7 @@ from app.core.agent_trajectory import (
     extract_tool_calls,
     validate_safety,
 )
+from app.core.agent_sandbox import run_fixture_sandbox
 
 
 def test_endpoint_trace_tool_calls_are_read_even_without_conversation_list():
@@ -52,3 +53,21 @@ def test_canonical_trajectory_preserves_state_and_tool_results():
     assert result["schema_version"] == "agent-trajectory/v1"
     assert result["tool_calls"][0]["name"] == "lookup"
     assert result["actual_state"] == {"ticket": "closed"}
+
+
+def test_fixture_sandbox_replays_tools_and_applies_state_patch():
+    result = run_fixture_sandbox(
+        trajectory=[{"type": "ai", "tool_calls": [{"name": "close_ticket", "args": {"id": "T-1"}}]}],
+        tools=[
+            {
+                "name": "close_ticket",
+                "result": {"ok": True},
+                "state_patch": {"ticket_status": "closed"},
+                "side_effect": {"name": "ticket_write"},
+            }
+        ],
+        safety_policy={"allowed_side_effects": ["ticket_write"]},
+    )
+    assert result["passed"] is True
+    assert result["tool_results"][0]["result"] == {"ok": True}
+    assert result["actual_state"] == {"ticket_status": "closed"}

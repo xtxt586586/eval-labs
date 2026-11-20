@@ -27,3 +27,13 @@ POST /api/calibration/judge
 ```
 
 它接收人工标注分数，返回平均绝对误差、重复评分方差和逐样本结果，用于检查 Judge 是否适合某个业务指标。
+
+## Fixture Sandbox
+
+对于需要验证工具返回、状态变化和副作用的 Agent，可以使用安全的工具 Fixture 回放接口：
+
+```text
+POST /api/agent-sandbox/run
+```
+
+请求中的 `tools` 为 JSON Fixture，每个工具可以声明 `result`、`state_patch` 和 `side_effect`。Sandbox 会按轨迹顺序回放工具调用，应用状态变更，收集副作用，并根据 `safety_policy` 检查禁止工具、最大调用次数和允许的副作用。它不执行任意代码或网络请求，适合开发机和 CI 回归。
