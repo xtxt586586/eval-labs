@@ -3,14 +3,15 @@ import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-
 import { Button, Layout, Menu, Space, Typography } from 'antd';
 import {
   SettingOutlined,
-  DatabaseOutlined,
-  AppstoreOutlined,
   PlayCircleOutlined,
-  BarChartOutlined,
-  SwapOutlined,
-  SlidersOutlined,
-  ApiOutlined,
-  ExperimentOutlined,
+  RadarChartOutlined,
+  DeploymentUnitOutlined,
+  FileSearchOutlined,
+  ControlOutlined,
+  ProfileOutlined,
+  LineChartOutlined,
+  PartitionOutlined,
+  CheckCircleFilled,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
 } from '@ant-design/icons';
@@ -35,31 +36,31 @@ const menuItems = [
   {
     key: 'workflow',
     type: 'group' as const,
-    label: '实验流程',
+    label: '工作台',
     children: [
-      { key: '/workbench', icon: <ExperimentOutlined />, label: '评测实验工作台' },
+      { key: '/workbench', icon: <RadarChartOutlined />, label: '评测实验工作台' },
     ],
   },
   {
     key: 'resources',
     type: 'group' as const,
-    label: '资源管理',
+    label: '资源层',
     children: [
-      { key: '/datasets', icon: <DatabaseOutlined />, label: '数据管理' },
-      { key: '/metrics', icon: <SlidersOutlined />, label: '指标管理' },
-      { key: '/endpoint-targets', icon: <ApiOutlined />, label: '被测接口' },
-      { key: '/scenarios', icon: <AppstoreOutlined />, label: '场景管理' },
+      { key: '/datasets', icon: <FileSearchOutlined />, label: '数据管理' },
+      { key: '/metrics', icon: <ControlOutlined />, label: '指标管理' },
+      { key: '/endpoint-targets', icon: <DeploymentUnitOutlined />, label: '被测接口' },
+      { key: '/scenarios', icon: <PartitionOutlined />, label: '场景管理' },
       { key: '/llm-configs', icon: <SettingOutlined />, label: 'LLM配置' },
     ],
   },
   {
     key: 'results',
     type: 'group' as const,
-    label: '结果分析',
+    label: '结果层',
     children: [
       { key: '/evaluations', icon: <PlayCircleOutlined />, label: '评测执行' },
-      { key: '/reports', icon: <BarChartOutlined />, label: '评测报告' },
-      { key: '/blind-tests', icon: <SwapOutlined />, label: '人工盲测' },
+      { key: '/reports', icon: <LineChartOutlined />, label: '评测报告' },
+      { key: '/blind-tests', icon: <ProfileOutlined />, label: '人工盲测' },
     ],
   },
 ];
@@ -76,7 +77,7 @@ const App: React.FC = () => {
       <Header className="app-header">
         <Space size={12} align="center">
           <div className="brand-mark">
-            <ExperimentOutlined />
+            <RadarChartOutlined />
           </div>
           <div>
             <Title level={4} className="brand-title">
@@ -85,6 +86,11 @@ const App: React.FC = () => {
             <div className="brand-subtitle">RAG / Agent / 多轮对话评测中枢</div>
           </div>
         </Space>
+        <div className="header-status" aria-label="评测内核状态">
+          <CheckCircleFilled />
+          <span>评测内核在线</span>
+          <b>LOCAL</b>
+        </div>
       </Header>
       <Layout className="app-body">
         <Sider
@@ -115,6 +121,12 @@ const App: React.FC = () => {
             items={menuItems}
             onClick={({ key }) => navigate(key)}
           />
+          {!collapsed && (
+            <div className="sider-footer">
+              <span>ENGINE</span>
+              <strong>v0.1 / LOCAL</strong>
+            </div>
+          )}
         </Sider>
         <Layout className="workspace-layout">
           <Content className="workspace-content">
