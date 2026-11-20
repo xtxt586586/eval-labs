@@ -1,6 +1,6 @@
 import asyncio
-import threading
 import time
+import uuid
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -9,6 +9,8 @@ from sqlalchemy.orm import Session, joinedload
 from app.core.config import settings
 from app.core.database import get_db, SessionLocal
 from app.core.scenario_snapshot import build_scenario_snapshot, snapshot_to_scenario_metrics
+from app.core.snapshots import build_dataset_snapshot, build_llm_config_snapshot
+from app.core.task_queue import submit_evaluation
 from app.models.evaluation import EvalTask
 from app.models.dataset import Dataset, DatasetRow
 from app.models.endpoint_target import EndpointTarget
@@ -21,18 +23,8 @@ router = APIRouter(prefix="/evaluations", tags=["Evaluations"])
 
 
 def _launch_evaluation(task_id: int) -> None:
-    """Run evaluation outside the FastAPI event loop so progress APIs stay responsive."""
-    from app.core.evaluation_engine import run_evaluation
-
-    def runner() -> None:
-        asyncio.run(run_evaluation(task_id, SessionLocal))
-
-    thread = threading.Thread(
-        target=runner,
-        name=f"eval-task-{task_id}",
-        daemon=True,
-    )
-    thread.start()
+    """Submit the task to the persistent-state evaluation queue."""
+    submit_evaluation(task_id, SessionLocal)
 
 
 def _validate_endpoint_payload(payload: EvalTaskCreate) -> None:
@@ -122,12 +114,15 @@ async def create_evaluation(payload: EvalTaskCreate, db: Session = Depends(get_d
         raise HTTPException(status_code=404, detail="LLM config not found")
 
     dataset = db.query(Dataset).filter(Dataset.id == payload.dataset_id).first()
-    actual_row_count = (
+    dataset_rows = (
         db.query(DatasetRow)
         .filter(DatasetRow.dataset_id == payload.dataset_id)
-        .count()
+        .order_by(DatasetRow.row_index.asc())
+        .all()
     )
+    actual_row_count = len(dataset_rows)
     dataset.row_count = actual_row_count
+    llm_config = db.query(LLMConfig).filter(LLMConfig.id == payload.llm_config_id).first()
 
     task = EvalTask(
         name=payload.name,
@@ -142,6 +137,10 @@ async def create_evaluation(payload: EvalTaskCreate, db: Session = Depends(get_d
         target_config=target_config,
         response_mapping=response_mapping,
         result_save_mode=payload.result_save_mode,
+        dataset_snapshot=build_dataset_snapshot(dataset, dataset_rows),
+        llm_config_snapshot=build_llm_config_snapshot(llm_config),
+        queue_attempts=0,
+        trace_id=uuid.uuid4().hex,
     )
     db.add(task)
     db.commit()
@@ -383,4 +382,22 @@ def cancel_evaluation(task_id: int, db: Session = Depends(get_db)):
     task.status = "cancelled"
     db.commit()
     db.refresh(task)
+    return task
+
+
+@router.post("/{task_id}/retry", response_model=EvalTaskResponse)
+def retry_evaluation(task_id: int, db: Session = Depends(get_db)):
+    task = db.query(EvalTask).filter(EvalTask.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Evaluation task not found")
+    if task.status not in {"failed", "cancelled"}:
+        raise HTTPException(status_code=409, detail="只有失败或取消的评测任务可以重试")
+    task.status = "pending"
+    task.error_message = None
+    task.progress = 0.0
+    task.completed_rows = 0
+    task.finished_at = None
+    db.commit()
+    db.refresh(task)
+    submit_evaluation(task.id, SessionLocal)
     return task

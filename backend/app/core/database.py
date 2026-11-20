@@ -44,6 +44,10 @@ def ensure_runtime_schema() -> None:
         "target_config": "ALTER TABLE eval_tasks ADD COLUMN target_config JSON",
         "response_mapping": "ALTER TABLE eval_tasks ADD COLUMN response_mapping JSON",
         "result_save_mode": "ALTER TABLE eval_tasks ADD COLUMN result_save_mode VARCHAR(50) DEFAULT 'task_only'",
+        "dataset_snapshot": "ALTER TABLE eval_tasks ADD COLUMN dataset_snapshot JSON",
+        "llm_config_snapshot": "ALTER TABLE eval_tasks ADD COLUMN llm_config_snapshot JSON",
+        "queue_attempts": "ALTER TABLE eval_tasks ADD COLUMN queue_attempts INTEGER DEFAULT 0",
+        "trace_id": "ALTER TABLE eval_tasks ADD COLUMN trace_id VARCHAR(100)",
     }
     missing_eval_task_sql = [
         sql for name, sql in eval_task_additions.items() if name not in eval_task_columns

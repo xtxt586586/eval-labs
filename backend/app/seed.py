@@ -209,6 +209,9 @@ def _upgrade_existing_sample_datasets(db: Session) -> None:
                 {"name": "user_input", "type": "conversation", "required": True, "description": "多轮对话轨迹：Human发问→AI决策→Tool执行→AI回复，type只能是human/ai/tool三种"},
                 {"name": "reference", "type": "text", "required": True, "description": "期望 Agent 最终应达成的目标"},
                 {"name": "reference_tool_calls", "type": "tool_call_list", "required": True, "description": "期望 Agent 应该调用的工具列表，每个含 name 和 args"},
+                {"name": "reference_tool_results", "type": "json", "required": False, "description": "期望工具返回结果列表，用于工具结果正确性"},
+                {"name": "expected_state", "type": "json", "required": False, "description": "任务完成后应该达到的业务状态"},
+                {"name": "safety_policy", "type": "json", "required": False, "description": "禁止工具、最大调用次数等安全策略"},
                 {"name": "reference_topics", "type": "text_list", "required": False, "description": "该 Agent 任务允许围绕的话题列表，用于 Topic Adherence 等多轮对话指标"},
                 {"name": "reference_role", "type": "text", "required": False, "description": "Agent 在任务中应遵守的角色和职责边界"},
                 {"name": "retrieved_contexts", "type": "text_list", "required": False, "description": "任务相关的工具/业务背景资料，用于 Turn Faithfulness 等可信度指标"},
@@ -308,6 +311,30 @@ def _upgrade_existing_agent_conversation_metrics(db: Session) -> None:
             "is_builtin": True,
         },
         {
+            "name": "tool_result_correctness",
+            "display_name": "工具结果正确性 (Tool Result)",
+            "metric_type": "builtin_tool_result_correctness",
+            "config": {"description": "工具返回是否符合期望结果。需要字段：reference_tool_results, tool_results"},
+            "category": "agent",
+            "is_builtin": True,
+        },
+        {
+            "name": "state_change_accuracy",
+            "display_name": "状态变更准确性 (State Change)",
+            "metric_type": "builtin_state_change_accuracy",
+            "config": {"description": "Agent 执行后的实际状态是否满足期望状态。需要字段：expected_state, actual_state"},
+            "category": "agent",
+            "is_builtin": True,
+        },
+        {
+            "name": "safety_policy",
+            "display_name": "工具安全策略 (Safety Policy)",
+            "metric_type": "builtin_safety_policy",
+            "config": {"description": "Agent 是否调用禁止工具、超过步骤限制或产生安全违规事件。需要字段：safety_policy"},
+            "category": "agent",
+            "is_builtin": True,
+        },
+        {
             "name": "agent_goal_accuracy",
             "display_name": "目标准确度 (Goal Accuracy)",
             "metric_type": "builtin_agent_goal_accuracy",
@@ -365,7 +392,7 @@ def _upgrade_existing_agent_conversation_metrics(db: Session) -> None:
     )
     if agent_scenario is not None:
         agent_scenario.description = "Agent 核心评测模板，覆盖任务完成、工具正确性、参数正确性、步骤效率和目标准确度。"
-        for metric_name in ["task_completion", "tool_call_accuracy", "argument_correctness", "step_efficiency", "agent_goal_accuracy"]:
+        for metric_name in ["task_completion", "tool_call_accuracy", "argument_correctness", "step_efficiency", "agent_goal_accuracy", "tool_result_correctness", "state_change_accuracy", "safety_policy"]:
             _ensure_scenario_metric(db, agent_scenario.id, metrics[metric_name].id, pass_threshold=0.7)
 
     multi_turn_scenario = (
@@ -683,6 +710,30 @@ def run_seed(db: Session) -> None:
             "display_name": "步骤效率 (Step Efficiency)",
             "metric_type": "builtin_step_efficiency",
             "config": {"description": "Agent 实际工具步骤数是否接近期望步骤数，惩罚多余或缺失步骤。需要字段：user_input(对话), reference_tool_calls"},
+            "category": "agent",
+            "is_builtin": True,
+        },
+        {
+            "name": "tool_result_correctness",
+            "display_name": "工具结果正确性 (Tool Result)",
+            "metric_type": "builtin_tool_result_correctness",
+            "config": {"description": "工具返回是否符合期望结果。需要字段：reference_tool_results, tool_results"},
+            "category": "agent",
+            "is_builtin": True,
+        },
+        {
+            "name": "state_change_accuracy",
+            "display_name": "状态变更准确性 (State Change)",
+            "metric_type": "builtin_state_change_accuracy",
+            "config": {"description": "Agent 执行后的实际状态是否满足期望状态。需要字段：expected_state, actual_state"},
+            "category": "agent",
+            "is_builtin": True,
+        },
+        {
+            "name": "safety_policy",
+            "display_name": "工具安全策略 (Safety Policy)",
+            "metric_type": "builtin_safety_policy",
+            "config": {"description": "Agent 是否调用禁止工具、超过步骤限制或产生安全违规事件。需要字段：safety_policy"},
             "category": "agent",
             "is_builtin": True,
         },

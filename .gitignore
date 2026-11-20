@@ -25,12 +25,14 @@ backend/.env.*
 *.db-journal
 backend/uploads/
 backend/venv/
+backend/*.log
 uploads/
 
 # Frontend
 frontend/node_modules/
 frontend/dist/
 frontend/tsconfig.tsbuildinfo
+frontend/*.log
 
 # IDE
 .idea/

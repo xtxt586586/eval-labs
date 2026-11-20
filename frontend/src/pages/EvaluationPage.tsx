@@ -833,6 +833,16 @@ const EvaluationPage: React.FC = () => {
                     <Input placeholder="trace.tool_calls" />
                   </Form.Item>
                 </Col>
+                <Col span={5}>
+                  <Form.Item name={['response_mapping', 'trajectory_path']} label="Agent轨迹字段">
+                    <Input placeholder="trace.messages" />
+                  </Form.Item>
+                </Col>
+                <Col span={5}>
+                  <Form.Item name={['response_mapping', 'actual_state_path']} label="最终状态字段">
+                    <Input placeholder="trace.state" />
+                  </Form.Item>
+                </Col>
                 <Col span={4}>
                   <Form.Item label="连通性">
                     <Button block loading={testingEndpoint} onClick={handleTestEndpoint}>
@@ -846,7 +856,7 @@ const EvaluationPage: React.FC = () => {
                 type="info"
                 showIcon
                 message="接口实时评测会先逐条调用业务接口，再把映射出的字段交给现有指标评分。"
-                description="默认只保存到本次任务结果；选择回写数据集时，会把 response、retrieved_contexts、tool_calls 等映射结果补充回原始数据行。"
+                description="默认只保存到本次任务结果；选择回写数据集时，会把 response、retrieved_contexts、tool_calls、Agent轨迹和状态字段补充回原始数据行。"
               />
             </div>
           )}

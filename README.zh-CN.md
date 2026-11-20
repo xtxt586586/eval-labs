@@ -236,6 +236,7 @@ http://localhost:5173
 - [开源发布检查清单](docs/open-source-readiness.md)
 - [数据库与存储选型](docs/database-and-storage.md)
 - [同类项目对比](docs/comparison.md)
+- [Agent 评测增强](docs/agent-evaluation.md)
 - [版本日志](CHANGELOG.zh-CN.md)
 
 ## 配置项

@@ -28,6 +28,10 @@ class EvalTask(Base):
     target_config = Column(JSON, nullable=True)
     response_mapping = Column(JSON, nullable=True)
     result_save_mode = Column(String(50), default="task_only")
+    dataset_snapshot = Column(JSON, nullable=True)
+    llm_config_snapshot = Column(JSON, nullable=True)
+    queue_attempts = Column(Integer, default=0)
+    trace_id = Column(String(100), nullable=True)
     logs = Column(Text, default="")
 
     dataset = relationship("Dataset")
