@@ -49,6 +49,22 @@ class JudgeCalibrationResponse(BaseModel):
     samples: List[Dict[str, Any]] = []
 
 
+class AgentSandboxRequest(BaseModel):
+    trajectory: Any
+    tools: List[Dict[str, Any]] = []
+    initial_state: Dict[str, Any] = {}
+    safety_policy: Dict[str, Any] = {}
+
+
+class AgentSandboxResponse(BaseModel):
+    passed: bool
+    violations: List[str] = []
+    tool_results: List[Dict[str, Any]] = []
+    actual_state: Dict[str, Any] = {}
+    side_effects: List[Any] = []
+    safety: Dict[str, Any] = {}
+
+
 class EvalDebugRequest(EvalTaskCreate):
     row_id: Optional[int] = None
 
