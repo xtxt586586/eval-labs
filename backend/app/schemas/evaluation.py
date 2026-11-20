@@ -27,6 +27,28 @@ class EvalTaskCreate(BaseModel):
     metric_overrides: Optional[List[MetricOverridePayload]] = None
 
 
+class JudgeCalibrationExample(BaseModel):
+    sample: Dict[str, Any]
+    expected_score: float
+
+
+class JudgeCalibrationRequest(BaseModel):
+    llm_config_id: int
+    metric_definition_id: int
+    examples: List[JudgeCalibrationExample]
+    repeats: int = 1
+
+
+class JudgeCalibrationResponse(BaseModel):
+    metric_name: str
+    sample_count: int
+    repeats: int
+    mean_absolute_error: Optional[float] = None
+    mean_score: Optional[float] = None
+    score_variance: Optional[float] = None
+    samples: List[Dict[str, Any]] = []
+
+
 class EvalDebugRequest(EvalTaskCreate):
     row_id: Optional[int] = None
 
@@ -66,6 +88,10 @@ class EvalTaskBrief(BaseModel):
     target_config: Optional[Dict[str, Any]] = None
     response_mapping: Optional[Dict[str, Any]] = None
     result_save_mode: Optional[str] = "task_only"
+    dataset_snapshot: Optional[Dict[str, Any]] = None
+    llm_config_snapshot: Optional[Dict[str, Any]] = None
+    queue_attempts: int = 0
+    trace_id: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 

@@ -263,6 +263,21 @@ const EndpointTargetModal: React.FC<EndpointTargetModalProps> = ({ open, target,
               <Input placeholder="trace.tool_calls" />
             </Form.Item>
           </Col>
+          <Col span={6}>
+            <Form.Item name={['response_mapping', 'trajectory_path']} label="Agent轨迹字段">
+              <Input placeholder="trace.messages" />
+            </Form.Item>
+          </Col>
+          <Col span={6}>
+            <Form.Item name={['response_mapping', 'actual_state_path']} label="最终状态字段">
+              <Input placeholder="trace.state" />
+            </Form.Item>
+          </Col>
+          <Col span={6}>
+            <Form.Item name={['response_mapping', 'side_effects_path']} label="副作用字段">
+              <Input placeholder="trace.side_effects" />
+            </Form.Item>
+          </Col>
         </Row>
         <Alert
           type="info"

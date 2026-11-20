@@ -17,6 +17,12 @@ import typing as t
 from datetime import datetime, timezone
 
 from app.core.endpoint_eval import extract_eval_fields, invoke_endpoint
+from app.core.agent_trajectory import (
+    canonical_trajectory,
+    compare_state,
+    extract_tool_calls,
+    validate_safety,
+)
 from app.core.prompt_manager import (
     ASPECT_CRITIC_INSTRUCTION,
     BUILTIN_LLM_METRIC_SPECS,
@@ -340,7 +346,7 @@ class ToolCallAccuracyMetric:
 
     async def ascore(self, row_data: dict[str, t.Any], _judge: OpenAIJudgeClient) -> _MetricResult:
         expected = list(row_data.get("reference_tool_calls") or [])
-        actual = _extract_actual_tool_calls(row_data.get("user_input"))
+        actual = extract_tool_calls(row_data)
         if not expected:
             return _MetricResult(None, "缺少 reference_tool_calls，无法计算工具调用准确度。")
 
@@ -364,7 +370,7 @@ class ArgumentCorrectnessMetric:
 
     async def ascore(self, row_data: dict[str, t.Any], _judge: OpenAIJudgeClient) -> _MetricResult:
         expected = list(row_data.get("reference_tool_calls") or [])
-        actual = _extract_actual_tool_calls(row_data.get("user_input"))
+        actual = extract_tool_calls(row_data)
         if not expected:
             return _MetricResult(None, "缺少 reference_tool_calls，无法计算参数正确性。")
 
@@ -392,7 +398,7 @@ class StepEfficiencyMetric:
 
     async def ascore(self, row_data: dict[str, t.Any], _judge: OpenAIJudgeClient) -> _MetricResult:
         expected = list(row_data.get("reference_tool_calls") or [])
-        actual = _extract_actual_tool_calls(row_data.get("user_input"))
+        actual = extract_tool_calls(row_data)
         if not expected:
             return _MetricResult(None, "缺少 reference_tool_calls，无法计算步骤效率。")
 
@@ -411,6 +417,41 @@ class StepEfficiencyMetric:
             score,
             f"期望工具步骤 {expected_count} 个，实际工具步骤 {actual_count} 个；步骤数量越接近期望越高分。",
         )
+
+
+class ToolResultCorrectnessMetric:
+    """Compare expected tool results with the observed tool results in a trace."""
+
+    async def ascore(self, row_data: dict[str, t.Any], _judge: OpenAIJudgeClient) -> _MetricResult:
+        expected = row_data.get("reference_tool_results") or []
+        actual = row_data.get("tool_results") or canonical_trajectory(row_data).get("tool_results") or []
+        if not expected:
+            return _MetricResult(None, "缺少 reference_tool_results，无法验证工具返回。")
+        matched = sum(1 for item in expected if item in actual)
+        score = round(matched / len(expected), 4)
+        return _MetricResult(score, f"期望工具结果 {len(expected)} 个，匹配 {matched} 个。")
+
+
+class StateChangeAccuracyMetric:
+    """Validate expected final state against the state reported by the Agent trace."""
+
+    async def ascore(self, row_data: dict[str, t.Any], _judge: OpenAIJudgeClient) -> _MetricResult:
+        result = compare_state(
+            row_data.get("expected_state") or row_data.get("reference_state"),
+            row_data.get("actual_state") or canonical_trajectory(row_data).get("actual_state"),
+        )
+        return _MetricResult(result["score"], f"状态差异字段: {result.get('mismatches') or '无'}。")
+
+
+class SafetyPolicyMetric:
+    """Deterministic policy gate for forbidden tools and unsafe trace events."""
+
+    async def ascore(self, row_data: dict[str, t.Any], _judge: OpenAIJudgeClient) -> _MetricResult:
+        result = validate_safety(
+            canonical_trajectory(row_data),
+            row_data.get("safety_policy") or row_data.get("reference_safety_policy"),
+        )
+        return _MetricResult(result["score"], f"安全违规: {result.get('violations') or '无'}。")
 
 
 def build_metric(
@@ -456,6 +497,15 @@ def build_metric(
 
     if metric_type == "builtin_step_efficiency":
         return ("simple", StepEfficiencyMetric())
+
+    if metric_type == "builtin_tool_result_correctness":
+        return ("simple", ToolResultCorrectnessMetric())
+
+    if metric_type == "builtin_state_change_accuracy":
+        return ("simple", StateChangeAccuracyMetric())
+
+    if metric_type == "builtin_safety_policy":
+        return ("simple", SafetyPolicyMetric())
 
     if metric_type in {"numeric", "discrete", "aspect_critic"}:
         return (
@@ -597,11 +647,24 @@ async def run_evaluation(task_id: int, session_factory) -> None:
         if task is None:
             logger.error("EvalTask %d not found -- aborting", task_id)
             return
+        task.queue_attempts = (task.queue_attempts or 0) + 1
+        db.commit()
 
         dataset = task.dataset
         scenario = task.scenario
         scenario_snapshot = task.scenario_snapshot or {}
         llm_config = task.llm_config
+        llm_snapshot = task.llm_config_snapshot or {}
+        if llm_snapshot:
+            from types import SimpleNamespace
+            llm_config = SimpleNamespace(
+                api_key=task.llm_config.api_key,
+                provider=llm_snapshot.get("provider"),
+                api_base_url=llm_snapshot.get("api_base_url") or task.llm_config.api_base_url,
+                model_name=llm_snapshot.get("model_name") or task.llm_config.model_name,
+                temperature=llm_snapshot.get("temperature"),
+                max_tokens=llm_snapshot.get("max_tokens"),
+            )
         evaluation_mode = task.evaluation_mode or "offline"
 
         scenario_metrics = snapshot_to_scenario_metrics(scenario_snapshot)
@@ -620,6 +683,19 @@ async def run_evaluation(task_id: int, session_factory) -> None:
             .order_by(DatasetRow.row_index)
             .all()
         )
+        dataset_snapshot = task.dataset_snapshot or {}
+        snapshot_entries = dataset_snapshot.get("rows") or []
+        if snapshot_entries:
+            rows_by_id = {row.id: row for row in dataset_rows}
+            snapshot_rows = []
+            for entry in snapshot_entries:
+                row = rows_by_id.get(entry.get("id"))
+                if row is not None:
+                    row._evaluation_snapshot_data = entry.get("data") or {}
+                    row._evaluation_snapshot_index = entry.get("row_index", row.row_index)
+                    snapshot_rows.append(row)
+            if snapshot_rows:
+                dataset_rows = snapshot_rows
         total_rows = len(dataset_rows)
         if total_rows == 0:
             task.status = "failed"
@@ -684,8 +760,13 @@ async def run_evaluation(task_id: int, session_factory) -> None:
                 break
 
             row_start = time.time()
-            base_row_data: dict = dict(dataset_row.data or {})
+            base_row_data: dict = dict(
+                getattr(dataset_row, "_evaluation_snapshot_data", None)
+                or dataset_row.data
+                or {}
+            )
             row_data: dict = {**base_row_data, "_dataset_data": base_row_data}
+            row_data["trajectory"] = canonical_trajectory(row_data)
             endpoint_trace: dict[str, t.Any] | None = None
             metric_scores: dict[str, t.Any] = {}
             row_error: str | None = None
@@ -708,6 +789,7 @@ async def run_evaluation(task_id: int, session_factory) -> None:
                     )
                     endpoint_trace = {
                         "status": "success",
+                        "trace_id": task.trace_id,
                         "status_code": response_payload.get("status_code"),
                         "latency_ms": response_payload.get("latency_ms"),
                         "request_body": response_payload.get("request_body"),
@@ -721,6 +803,7 @@ async def run_evaluation(task_id: int, session_factory) -> None:
                         "_dataset_data": base_row_data,
                         "_endpoint_trace": endpoint_trace,
                     }
+                    row_data["trajectory"] = canonical_trajectory(row_data, endpoint_trace)
                     if task.result_save_mode == "write_back" and extracted_fields:
                         dataset_row.data = {**(dataset_row.data or {}), **extracted_fields}
                         _ensure_dataset_schema_fields(dataset, extracted_fields)
@@ -738,6 +821,7 @@ async def run_evaluation(task_id: int, session_factory) -> None:
                     row_error = f"接口调用失败: {str(exc)[:800]}"
                     endpoint_trace = {
                         "status": "error",
+                        "trace_id": task.trace_id,
                         "error": row_error,
                     }
                     for metric_name, _metric_instance, _sm in metrics:
@@ -864,7 +948,7 @@ def _persist_row_result(
     row_result = EvalRowResult(
         eval_task_id=task.id,
         dataset_row_id=dataset_row.id,
-        row_index=dataset_row.row_index,
+        row_index=getattr(dataset_row, "_evaluation_snapshot_index", dataset_row.row_index),
         metric_scores=metric_scores,
         endpoint_trace=endpoint_trace,
         is_pass=is_pass,
@@ -1122,6 +1206,14 @@ def _sample_payload(
         "retrieved_context_ids",
         "reference_context_ids",
         "reference_tool_calls",
+        "reference_tool_results",
+        "expected_state",
+        "reference_state",
+        "actual_state",
+        "side_effects",
+        "safety_policy",
+        "safety_events",
+        "trajectory",
         "reference_topics",
         "reference_role",
         "rubrics",
@@ -1173,21 +1265,7 @@ def _match_allowed_value(value: str, allowed_values: list[str]) -> str:
 
 
 def _extract_actual_tool_calls(user_input: t.Any) -> list[dict[str, t.Any]]:
-    if not isinstance(user_input, list):
-        return []
-    calls: list[dict[str, t.Any]] = []
-    for message in user_input:
-        if not isinstance(message, dict):
-            continue
-        for tool_call in message.get("tool_calls") or []:
-            if isinstance(tool_call, dict):
-                calls.append(
-                    {
-                        "name": tool_call.get("name"),
-                        "args": tool_call.get("args") or {},
-                    }
-                )
-    return calls
+    return extract_tool_calls({"user_input": user_input})
 
 
 def _find_tool_call_match(

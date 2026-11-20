@@ -121,15 +121,24 @@ def extract_eval_fields(
         "retrieved_contexts": mapping.get("retrieved_contexts_path"),
         "tool_calls": mapping.get("tool_calls_path"),
         "retrieved_context_ids": mapping.get("retrieved_context_ids_path"),
+        "trajectory": mapping.get("trajectory_path"),
+        "tool_results": mapping.get("tool_results_path"),
+        "actual_state": mapping.get("actual_state_path"),
+        "side_effects": mapping.get("side_effects_path"),
+        "safety_events": mapping.get("safety_events_path"),
     }
 
     for field, path in path_by_field.items():
-        if not path:
-            continue
-        value = get_path(parsed, str(path)) if parsed is not None else None
+        value = get_path(parsed, str(path)) if path and parsed is not None else None
+        if value is None and not path:
+            value = response_payload.get(field)
+            if value is None and isinstance(parsed, dict):
+                value = parsed.get(field)
         if value is None and field == "response":
             value = response_payload.get("answer")
         if value is None:
+            if not path:
+                continue
             errors[field] = f"响应字段路径不存在: {path}"
             continue
         extracted[field] = value
@@ -158,12 +167,22 @@ async def _invoke_json(
         except Exception:
             parsed_response = None
     answer = _first_path(parsed_response, ["answer", "data.answer", "choices.0.message.content"])
+    trajectory = _first_path(
+        parsed_response,
+        ["trajectory", "data.trajectory", "trace", "data.trace", "messages"],
+    )
+    tool_calls = _first_path(
+        parsed_response,
+        ["tool_calls", "data.tool_calls", "trace.tool_calls", "data.trace.tool_calls"],
+    )
     return {
         "status_code": response.status_code,
         "content_type": content_type,
         "raw_response": raw_text[:20000],
         "parsed_response": parsed_response if isinstance(parsed_response, (dict, list)) else None,
         "answer": answer,
+        "trajectory": trajectory,
+        "tool_calls": tool_calls,
     }
 
 
@@ -176,6 +195,7 @@ async def _invoke_sse(
     answer_parts: list[str] = []
     final_answer: str | None = None
     raw_events: list[str] = []
+    structured_events: list[t.Any] = []
     status_code = 0
     content_type = ""
     async with client.stream("POST", url, headers=headers, json=request_body) as response:
@@ -191,6 +211,7 @@ async def _invoke_sse(
                 continue
             raw_events.append(payload_text)
             payload = _safe_json(payload_text)
+            structured_events.append(payload)
             text = _first_path(payload, ["answer", "data.answer", "content", "text", "delta", "choices.0.delta.content"])
             if isinstance(text, str) and text:
                 answer_parts.append(text)
@@ -198,12 +219,26 @@ async def _invoke_sse(
             if isinstance(maybe_final, str) and maybe_final:
                 final_answer = maybe_final
     answer = final_answer or "".join(answer_parts).strip()
+    tool_calls = [
+        item
+        for event in structured_events
+        if isinstance(event, dict)
+        for item in (
+            event.get("tool_calls")
+            or (event.get("data") or {}).get("tool_calls")
+            or (event.get("trace") or {}).get("tool_calls")
+            or []
+        )
+        if isinstance(item, dict)
+    ]
     return {
         "status_code": status_code,
         "content_type": content_type,
         "raw_response": "\n".join(raw_events)[:20000],
-        "parsed_response": {"answer": answer, "events": raw_events[:50]},
+        "parsed_response": {"answer": answer, "events": raw_events[:50], "trajectory": structured_events[:100]},
         "answer": answer,
+        "trajectory": structured_events[:100],
+        "tool_calls": tool_calls,
     }
 
 
