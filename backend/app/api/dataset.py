@@ -182,6 +182,8 @@ def update_dataset(
     update_data = payload.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(dataset, key, value)
+    if update_data:
+        dataset.version = (dataset.version or 1) + 1
 
     db.commit()
     db.refresh(dataset)
@@ -260,6 +262,7 @@ def add_dataset_row(
         data=payload.data,
     )
     db.add(row)
+    dataset.version = (dataset.version or 1) + 1
 
     dataset.row_count = (
         db.query(DatasetRow).filter(DatasetRow.dataset_id == dataset_id).count() + 1
@@ -292,6 +295,7 @@ def delete_dataset_row(
             .count()
             - 1
         )
+        dataset.version = (dataset.version or 1) + 1
 
     db.commit()
     return None
@@ -352,6 +356,8 @@ def import_dataset_rows(
         db.query(DatasetRow).filter(DatasetRow.dataset_id == dataset_id).count()
         + len(normalized_records)
     )
+    if normalized_records:
+        dataset.version = (dataset.version or 1) + 1
 
     db.commit()
 

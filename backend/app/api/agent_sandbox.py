@@ -13,4 +13,7 @@ def run_agent_sandbox(payload: AgentSandboxRequest):
         tools=payload.tools,
         initial_state=payload.initial_state,
         safety_policy=payload.safety_policy,
+        expected_state=payload.expected_state,
+        expected_tool_results=payload.expected_tool_results,
+        expected_side_effects=payload.expected_side_effects,
     )

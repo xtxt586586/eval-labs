@@ -9,10 +9,10 @@ os.environ["SEED_ON_STARTUP"] = "false"
 os.environ["RUN_EVAL_ON_CREATE"] = "false"
 os.environ["LLM_ENDPOINT"] = "https://api.example.com/v1"
 os.environ["LLM_MODEL"] = "test-model"
-os.environ["LLM_API_KEY"] = "test-api-key"
+os.environ["LLM_API_KEY"] = ""
 os.environ.setdefault("TEST_LLM_ENDPOINT", os.environ["LLM_ENDPOINT"])
 os.environ.setdefault("TEST_LLM_MODEL", os.environ["LLM_MODEL"])
-os.environ.setdefault("TEST_LLM_API_KEY", os.environ["LLM_API_KEY"])
+os.environ["TEST_LLM_API_KEY"] = ""
 
 from app.core.database import Base, get_db
 from app.main import app

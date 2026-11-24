@@ -74,6 +74,54 @@ def test_create_evaluation(client, test_llm_payload):
     assert body["dataset_id"] == dataset["id"]
     assert body["scenario_id"] == scenario["id"]
     assert body["llm_config_id"] == llm["id"]
+    assert body["dataset_snapshot"]["dataset_version"] == 2
+    assert len(body["dataset_snapshot"]["content_hash"]) == 64
+    assert body["llm_config_snapshot"]["llm_config_version"] == 1
+    assert len(body["llm_config_snapshot"]["content_hash"]) == 64
+    assert body["scenario_snapshot"]["metrics"][0]["metric_definition"]["version"] == 1
+
+
+def test_completed_evaluation_cannot_be_cancelled(client, test_llm_payload, db):
+    from app.models.evaluation import EvalTask
+
+    llm, dataset, scenario = _setup_eval_prerequisites(client, test_llm_payload)
+    created = client.post("/api/evaluations", json={
+        "name": "Completed task",
+        "dataset_id": dataset["id"],
+        "scenario_id": scenario["id"],
+        "llm_config_id": llm["id"],
+    }).json()
+    task = db.query(EvalTask).filter(EvalTask.id == created["id"]).first()
+    task.status = "completed"
+    db.commit()
+
+    response = client.post(f"/api/evaluations/{created['id']}/cancel")
+
+    assert response.status_code == 409
+    assert db.query(EvalTask).filter(EvalTask.id == created["id"]).first().status == "completed"
+
+
+def test_running_evaluation_enters_cancelling_before_retry_is_allowed(client, test_llm_payload, db):
+    from app.models.evaluation import EvalTask
+
+    llm, dataset, scenario = _setup_eval_prerequisites(client, test_llm_payload)
+    created = client.post("/api/evaluations", json={
+        "name": "Running task",
+        "dataset_id": dataset["id"],
+        "scenario_id": scenario["id"],
+        "llm_config_id": llm["id"],
+    }).json()
+    task = db.query(EvalTask).filter(EvalTask.id == created["id"]).first()
+    task.status = "running"
+    db.commit()
+
+    cancelled = client.post(f"/api/evaluations/{created['id']}/cancel")
+    retry = client.post(f"/api/evaluations/{created['id']}/retry")
+
+    assert cancelled.status_code == 200
+    assert cancelled.json()["status"] == "cancelling"
+    assert cancelled.json()["finished_at"] is None
+    assert retry.status_code == 409
 
 
 def test_prompt_renderer_supports_namespaced_variables():

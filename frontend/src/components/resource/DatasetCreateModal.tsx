@@ -10,6 +10,8 @@ const fieldTypeOptions = [
   { label: 'text_list', value: 'text_list' },
   { label: 'conversation', value: 'conversation' },
   { label: 'tool_call_list', value: 'tool_call_list' },
+  { label: 'json', value: 'json' },
+  { label: 'tags', value: 'tags' },
 ];
 
 const singleTurnDefaults: FieldDefinition[] = [
@@ -94,7 +96,7 @@ const DatasetCreateModal: React.FC<DatasetCreateModalProps> = ({
       okText="创建"
       cancelText="取消"
       width={720}
-      destroyOnClose
+      destroyOnHidden
     >
       <Form form={form} layout="vertical" initialValues={{ sample_type: initialSampleType }}>
         <Form.Item name="name" label="数据集名称" rules={[{ required: true, message: '请输入名称' }]}>

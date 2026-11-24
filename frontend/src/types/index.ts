@@ -10,6 +10,7 @@ export interface LLMConfig {
   is_default: boolean;
   created_at: string;
   updated_at: string;
+  version: number;
 }
 
 export interface LLMConfigCreate {
@@ -44,7 +45,8 @@ export interface Dataset {
   field_schema: FieldDefinition[];
   row_count: number;
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
+  version: number;
 }
 
 export interface DatasetRow {
@@ -64,6 +66,8 @@ export interface MetricDefinition {
   category: string;
   is_builtin: boolean;
   created_at: string;
+  updated_at?: string;
+  version: number;
 }
 
 export interface EndpointTarget {

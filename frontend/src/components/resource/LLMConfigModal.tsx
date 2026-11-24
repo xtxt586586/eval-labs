@@ -94,7 +94,7 @@ const LLMConfigModal: React.FC<LLMConfigModalProps> = ({ open, config, onCancel,
       open={open}
       onCancel={onCancel}
       width={560}
-      destroyOnClose
+      destroyOnHidden
       footer={[
         <Button key="test" icon={<ExperimentOutlined />} loading={testingDraft} onClick={testDraft}>
           测试当前配置

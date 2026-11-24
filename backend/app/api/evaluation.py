@@ -1,9 +1,11 @@
 import asyncio
 import time
 import uuid
+from datetime import datetime, timezone
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import case, update
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.config import settings
@@ -379,8 +381,22 @@ def cancel_evaluation(task_id: int, db: Session = Depends(get_db)):
     task = db.query(EvalTask).filter(EvalTask.id == task_id).first()
     if not task:
         raise HTTPException(status_code=404, detail="Evaluation task not found")
-    task.status = "cancelled"
+    if task.status not in {"pending", "running"}:
+        raise HTTPException(status_code=409, detail="只有等待中或运行中的评测任务可以取消")
+    now = datetime.now(timezone.utc)
+    result = db.execute(
+        update(EvalTask)
+        .where(EvalTask.id == task_id, EvalTask.status.in_(["pending", "running"]))
+        .values(
+            status=case((EvalTask.status == "pending", "cancelled"), else_="cancelling"),
+            finished_at=case((EvalTask.status == "pending", now), else_=EvalTask.finished_at),
+        )
+    )
+    if result.rowcount != 1:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="任务状态已变化，请刷新后重试")
     db.commit()
+    db.expire(task)
     db.refresh(task)
     return task
 
@@ -392,11 +408,17 @@ def retry_evaluation(task_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Evaluation task not found")
     if task.status not in {"failed", "cancelled"}:
         raise HTTPException(status_code=409, detail="只有失败或取消的评测任务可以重试")
+    max_attempts = max(int(settings.EVAL_MAX_TASK_ATTEMPTS), 1)
+    if (task.queue_attempts or 0) >= max_attempts:
+        raise HTTPException(status_code=409, detail=f"任务已达到最大尝试次数 {max_attempts}")
     task.status = "pending"
     task.error_message = None
     task.progress = 0.0
     task.completed_rows = 0
     task.finished_at = None
+    task.started_at = None
+    task.worker_id = None
+    task.heartbeat_at = None
     db.commit()
     db.refresh(task)
     submit_evaluation(task.id, SessionLocal)

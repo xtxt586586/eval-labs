@@ -14,6 +14,7 @@ class Dataset(Base):
     sample_type = Column(String(50), default="single_turn")  # single_turn / multi_turn
     field_schema = Column(JSON, nullable=True)
     row_count = Column(Integer, default=0)
+    version = Column(Integer, nullable=False, default=1)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 

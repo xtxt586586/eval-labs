@@ -40,7 +40,7 @@ DATABASE_URL=sqlite:///./eval_platform.db
 DATABASE_URL=postgresql+psycopg://user:password@localhost:5432/eval_labs
 ```
 
-需要在 `backend/requirements.txt` 增加 PostgreSQL 驱动，例如：
+`backend/requirements.txt` 已包含 PostgreSQL 驱动：
 
 ```text
 psycopg[binary]>=3.1.0
@@ -83,14 +83,14 @@ git rm --cached eval_platform.db test.db frontend/tsconfig.tsbuildinfo
 
 ## Migration Plan / 迁移计划
 
-当前项目使用 SQLAlchemy `create_all` 和轻量兼容补丁，适合早期 Demo，但不适合作为长期迁移系统。
+当前项目使用 SQLAlchemy `create_all`，并在启动时对 SQLite 执行有限的 runtime schema upgrades。它尚未使用 Alembic；这些补丁不等同于可审计、可回滚的版本化迁移，也没有替代 PostgreSQL 环境的迁移验证。
 
 开源后建议按阶段补齐：
 
 | 阶段 | 目标 |
 |------|------|
 | Phase 1 | 保留 `create_all`，文档说明 SQLite/PostgreSQL 配置 |
-| Phase 2 | 引入 Alembic，生成初始 migration，停止继续增加 runtime schema patch |
+| Phase 2 | 已部分完成：SQLite runtime upgrade 覆盖新增版本、快照和 worker 租约字段；生产使用前仍需采用 Alembic，并验证 PostgreSQL 正向迁移与回滚 |
 | Phase 3 | 对大表添加索引：`dataset_rows.dataset_id`、`eval_row_results.eval_task_id`、`created_at` 等 |
 | Phase 4 | 引入对象存储抽象，把上传文档、长 trace、大报告附件从数据库拆出 |
 | Phase 5 | 加密敏感字段，支持 KMS/环境变量密钥轮换 |

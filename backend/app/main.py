@@ -61,11 +61,14 @@ async def lifespan(application: FastAPI):
             db.close()
 
     _backfill_eval_task_scenario_snapshots()
-    from app.core.task_queue import recover_interrupted_evaluations
+    from app.core.task_queue import recover_interrupted_evaluations, resume_pending_evaluations
     from app.core.database import SessionLocal
     recovered = recover_interrupted_evaluations(SessionLocal)
     if recovered:
         logging.getLogger("app").warning("Recovered %s interrupted evaluation tasks", recovered)
+    resumed = resume_pending_evaluations(SessionLocal)
+    if resumed:
+        logging.getLogger("app").info("Resumed %s pending evaluation tasks", resumed)
 
     yield
 

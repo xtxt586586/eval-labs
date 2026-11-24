@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Table,
   Button,
   Modal,
   Form,
@@ -12,13 +11,16 @@ import {
   message,
   Popconfirm,
   Tag,
-  Typography,
   Spin,
+  Row,
+  Col,
+  Card,
 } from 'antd';
-import { PlusOutlined, DeleteOutlined, MinusCircleOutlined, FileSearchOutlined } from '@ant-design/icons';
+import { PlusOutlined, DeleteOutlined, MinusCircleOutlined, FileSearchOutlined, DatabaseOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import type { Dataset, FieldDefinition } from '../types';
 import * as api from '../services/api';
+import { Typography } from 'antd';
 
 const { Title } = Typography;
 
@@ -134,55 +136,18 @@ const DatasetListPage: React.FC = () => {
     }
   };
 
-  const columns = [
-    {
-      title: '名称',
-      dataIndex: 'name',
-      key: 'name',
-      render: (text: string, record: Dataset) => (
-        <a onClick={() => navigate(`/datasets/${record.id}`)}>{text}</a>
-      ),
-    },
-    {
-      title: '类型',
-      dataIndex: 'sample_type',
-      key: 'sample_type',
-      width: 120,
-      render: (v: string) => (
-        <Tag color={sampleTypeColorMap[v] || 'default'}>{v}</Tag>
-      ),
-    },
-    { title: '行数', dataIndex: 'row_count', key: 'row_count', width: 80 },
-    {
-      title: '创建时间',
-      dataIndex: 'created_at',
-      key: 'created_at',
-      width: 180,
-      render: (v: string) => new Date(v).toLocaleString('zh-CN'),
-    },
-    {
-      title: '操作',
-      key: 'actions',
-      width: 100,
-      render: (_: unknown, record: Dataset) => (
-        <Popconfirm title="确认删除此数据集？" onConfirm={() => handleDelete(record.id)}>
-          <Button size="small" danger icon={<DeleteOutlined />}>
-            删除
-          </Button>
-        </Popconfirm>
-      ),
-    },
-  ];
-
   return (
     <Spin spinning={loading}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <Title level={4} style={{ margin: 0 }}>
-          数据集管理
-        </Title>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: 24, fontWeight: 600, color: 'var(--text-primary)' }}>数据集管理</h2>
+          <p style={{ margin: '4px 0 0', color: 'var(--text-secondary)', fontSize: 13 }}>
+            管理评测所需的测试数据集，支持单轮/多轮对话、RAG、Agent 等场景。
+          </p>
+        </div>
         <Space>
           <Button icon={<FileSearchOutlined />} onClick={() => navigate('/datasets/rag-builder')}>
-            上传文档生成测试数据
+            RAG 构建
           </Button>
           <Button type="primary" icon={<PlusOutlined />} onClick={() => setModalOpen(true)}>
             新建数据集
@@ -190,12 +155,104 @@ const DatasetListPage: React.FC = () => {
         </Space>
       </div>
 
-      <Table
-        rowKey="id"
-        columns={columns}
-        dataSource={datasets}
-        pagination={false}
-      />
+      {datasets.length === 0 ? (
+        <div style={{
+          textAlign: 'center',
+          padding: '60px 20px',
+          background: 'var(--bg-secondary)',
+          borderRadius: 8,
+          border: '1px dashed var(--border-color)',
+        }}>
+          <DatabaseOutlined style={{ fontSize: 40, color: 'var(--text-tertiary)', marginBottom: 16 }} />
+          <p style={{ color: 'var(--text-secondary)', marginBottom: 20 }}>暂无数据集，创建第一个开始评测</p>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setModalOpen(true)}>
+            新建数据集
+          </Button>
+        </div>
+      ) : (
+        <Row gutter={[16, 16]}>
+          {datasets.map((dataset) => (
+            <Col key={dataset.id} xs={24} sm={12} md={8} lg={6}>
+              <Card
+                hoverable
+                style={{ height: '100%', cursor: 'pointer' }}
+                onClick={() => navigate(`/datasets/${dataset.id}`)}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, height: '100%' }}>
+                  {/* 标题行 */}
+                  <div>
+                    <h4 style={{
+                      margin: '0 0 4px',
+                      fontSize: 15,
+                      fontWeight: 600,
+                      color: 'var(--text-primary)',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}>
+                      {dataset.name}
+                    </h4>
+                    {dataset.description && (
+                      <p style={{
+                        margin: 0,
+                        fontSize: 12,
+                        color: 'var(--text-tertiary)',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}>
+                        {dataset.description}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* 标签 */}
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    <Tag color={sampleTypeColorMap[dataset.sample_type] || 'default'}>
+                      {dataset.sample_type}
+                    </Tag>
+                    <Tag color="gold" style={{ fontFamily: 'JetBrains Mono, monospace' }}>
+                      {dataset.row_count} 行
+                    </Tag>
+                  </div>
+
+                  {/* 时间 */}
+                  <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 'auto' }}>
+                    {new Date(dataset.created_at).toLocaleDateString('zh-CN')}
+                  </div>
+
+                  {/* 操作 */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      gap: 8,
+                      paddingTop: 10,
+                      borderTop: '1px solid var(--border-color)',
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Button
+                      size="small"
+                      type="text"
+                      onClick={() => navigate(`/datasets/${dataset.id}`)}
+                    >
+                      查看
+                    </Button>
+                    <Popconfirm
+                      title="确认删除此数据集？"
+                      onConfirm={() => handleDelete(dataset.id)}
+                    >
+                      <Button size="small" danger type="text" icon={<DeleteOutlined />}>
+                        删除
+                      </Button>
+                    </Popconfirm>
+                  </div>
+                </div>
+              </Card>
+            </Col>
+          ))}
+        </Row>
+      )}
 
       <Modal
         title="新建数据集"

@@ -84,6 +84,8 @@ def update_llm_config(
     update_data = payload.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(config, key, value)
+    if update_data:
+        config.version = (config.version or 1) + 1
 
     db.commit()
     db.refresh(config)

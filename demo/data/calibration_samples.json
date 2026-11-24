@@ -1,0 +1,22 @@
+{
+  "metric_name": "factual_correctness",
+  "annotation_status": "illustrative_examples_require_human_review_before_claiming_calibration_evidence",
+  "examples": [
+    {
+      "sample": {"response": "巴黎是法国的首都。", "reference": "巴黎是法国首都。"},
+      "expected_score": 1.0,
+      "annotation_note": "语义一致，完整支持核心事实；请由领域标注者复核。"
+    },
+    {
+      "sample": {"response": "巴黎是德国的首都。", "reference": "巴黎是法国首都。"},
+      "expected_score": 0.0,
+      "annotation_note": "核心事实与参考答案冲突；请由领域标注者复核。"
+    },
+    {
+      "sample": {"response": "巴黎位于法国。", "reference": "巴黎是法国的首都，也是法国最大城市。"},
+      "expected_score": 0.5,
+      "annotation_note": "只支持部分事实，未覆盖最大城市；请由领域标注者复核。"
+    }
+  ],
+  "repeats": 3
+}

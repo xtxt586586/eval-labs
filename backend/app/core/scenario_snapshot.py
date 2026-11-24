@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 from types import SimpleNamespace
 from typing import Any
 
@@ -51,6 +53,7 @@ def build_scenario_snapshot(scenario, metric_overrides: list[Any] | None = None)
                 ),
                 "metric_definition": {
                     "id": metric_definition.id,
+                    "version": getattr(metric_definition, "version", 1),
                     "name": metric_definition.name,
                     "display_name": metric_definition.display_name,
                     "metric_type": metric_definition.metric_type,
@@ -61,8 +64,9 @@ def build_scenario_snapshot(scenario, metric_overrides: list[Any] | None = None)
             }
         )
 
-    return {
+    payload = {
         "id": scenario.id,
+        "version": getattr(scenario, "version", 1),
         "name": scenario.name,
         "description": scenario.description,
         "scene_type": scenario.scene_type,
@@ -70,6 +74,9 @@ def build_scenario_snapshot(scenario, metric_overrides: list[Any] | None = None)
         "is_preset": scenario.is_preset,
         "metrics": metrics,
     }
+    encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
+    payload["content_hash"] = hashlib.sha256(encoded).hexdigest()
+    return payload
 
 
 def snapshot_to_scenario_metrics(snapshot: dict[str, Any] | None) -> list[Any]:

@@ -1,0 +1,12 @@
+{
+  "description": "Deterministic Agent demo metrics; no external Judge calls are needed.",
+  "pass_threshold": 0.8,
+  "metrics": [
+    {"name": "tool_call_accuracy", "display_name": "Tool Correctness", "metric_type": "builtin_tool_call_accuracy"},
+    {"name": "argument_correctness", "display_name": "Argument Correctness", "metric_type": "builtin_argument_correctness"},
+    {"name": "step_efficiency", "display_name": "Step Efficiency", "metric_type": "builtin_step_efficiency"},
+    {"name": "tool_result_correctness", "display_name": "Tool Result", "metric_type": "builtin_tool_result_correctness"},
+    {"name": "state_change_accuracy", "display_name": "State Change", "metric_type": "builtin_state_change_accuracy"},
+    {"name": "safety_policy", "display_name": "Safety Policy", "metric_type": "builtin_safety_policy"}
+  ]
+}

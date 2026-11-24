@@ -9,6 +9,7 @@ __pycache__/
 .coverage
 htmlcov/
 *.egg-info/
+.venv/
 
 # Local runtime data
 .env
@@ -27,6 +28,25 @@ backend/uploads/
 backend/venv/
 backend/*.log
 uploads/
+demo/state/
+demo/runs/*
+!demo/runs/.gitkeep
+!demo/runs/latest.json
+!demo/runs/calibration.json
+demo/evidence/*.log
+demo/evidence/*.txt
+demo/evidence/*.json
+demo/evidence/*.png
+demo/evidence/*.jpg
+demo/evidence/*.jpeg
+demo/evidence/*.webp
+!demo/evidence/README.md
+!demo/evidence/verification.txt
+backend-test.log
+frontend-build.log
+**/.cache/
+**/model_cache/
+**/models--*/
 
 # Frontend
 frontend/node_modules/

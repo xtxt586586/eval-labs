@@ -192,6 +192,9 @@ Agent 评测关注的是“行动是否正确”。样本可以是单轮任务�
 | `user_input` | conversation | 从 Agent 运行日志采集的完整对话 | 必须 |
 | `reference` | text | 你写的「期望达成的目标」 | Task Completion / Goal Accuracy 需要 |
 | `reference_tool_calls` | tool_call_list | 你写的「期望调用的工具」 | Tool Correctness / Argument Correctness / Step Efficiency 需要 |
+| `reference_tool_results` | JSON | 期望的工具返回结果 | Tool Result 指标需要 |
+| `expected_state` | JSON | 期望工具执行后的业务状态 | State Change 指标需要 |
+| `safety_policy` | JSON | 禁止工具、调用上限和副作用白名单等 | Safety Policy 指标需要 |
 | `reference_role` | text | Agent 应遵守的角色和职责边界 | 角色一致性类扩展指标需要 |
 | `retrieved_contexts` | text_list | 任务相关的工具/业务背景资料 | 多轮可信度类扩展指标需要 |
 
@@ -201,7 +204,12 @@ Agent 评测关注的是“行动是否正确”。样本可以是单轮任务�
 |------|------|----------|
 | Agent 任务 | Task Completion、Goal Accuracy | 是否完成任务闭环，最终结果是否符合用户目标 |
 | Agent 工具 | Tool Correctness、Argument Correctness | 工具是否选对，参数是否正确 |
-| Agent 过程 | Step Efficiency | 执行步骤是否高效，是否存在多余、重复或缺失步骤 |
+| Agent 过程 | Step Efficiency、Tool Result | 步骤是否合理，工具返回是否符合预期 |
+| Agent 状态与安全 | State Change、Safety Policy | 状态是否达到预期，是否违反工具/调用/副作用策略 |
+
+轨迹可从常见消息、tool call 列表、OTLP JSON spans 或 SSE 事件数组接入，并在评测时归一化到 `otel-agent-trajectory/v1`。在线 Endpoint 评测可通过字段映射传入轨迹、工具调用、工具返回、最终状态、副作用和安全事件。平台不会将归一化轨迹导出到 OTLP Collector。
+
+若要验证工具返回、状态变化和副作用，可使用 Agent 沙箱的声明式 fixture 回放；它不执行任意 Agent 代码。任务创建时会保存数据集、场景和 Judge 配置快照及哈希；Judge 校准页可用人工标注分数检查 LLM Judge 的误差与重复评分方差。
 
 **对话数据格式说明**：
 
@@ -309,6 +317,9 @@ Agent 评测关注的是“行动是否正确”。样本可以是单轮任务�
 | Argument Correctness | 参数正确性 | Agent | 需要 reference_tool_calls | 0~1 | 工具参数传对了吗？ |
 | Step Efficiency | 步骤效率 | Agent | 需要 reference_tool_calls | 0~1 | 是否多调、漏调或重复调用？ |
 | Goal Accuracy | 目标准确度 | Agent | 需要 reference | 0~1 | 最终目标达成准确吗？ |
+| Tool Result | 工具结果正确性 | Agent | 需要 reference_tool_results | 0~1 | 工具返回是否符合预期？ |
+| State Change | 状态变更准确性 | Agent | 需要 expected_state | 0~1 | 执行后的状态是否满足断言？ |
+| Safety Policy | 工具安全策略 | Agent | 需要 safety_policy | 0~1 | 是否遵守禁止工具、步骤上限和副作用策略？ |
 | Topic Adherence | 话题遵守度 | 多轮对话 | 需要 reference_topics | 0~1 | AI 有没有跑题？ |
 | Turn Relevancy | 轮次相关性 | 多轮对话 | **不需要** | 0~1 | 每轮回复是否回应当前用户？ |
 | Conversation Completeness | 对话完成度 | 多轮对话 | 需要 reference | 0~1 | 整段对话是否解决用户需求？ |

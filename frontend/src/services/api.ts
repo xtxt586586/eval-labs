@@ -105,6 +105,18 @@ export const getEvaluationLogs = (id: number) => api.get(`/evaluations/${id}/log
 export const cancelEvaluation = (id: number) => api.post(`/evaluations/${id}/cancel`);
 export const testEvaluationEndpoint = (data: any) => api.post('/evaluations/test-endpoint', data).then(r => r.data);
 
+// ======================== Agent Environment ========================
+
+export const runAgentSandbox = (data: any) => api.post('/agent-sandbox/run', data).then(r => r.data);
+
+// ======================== Judge Calibration ========================
+
+export const calibrateJudge = (data: any) => api.post('/calibration/judge', data).then(r => r.data);
+export const listJudgeCalibrations = (limit = 50) => api.get('/calibration/judge', { params: { limit } }).then(r => r.data);
+export const getObservabilityMetrics = () => api.get('/observability/metrics').then(r => r.data);
+export const getObservabilityTraces = (limit = 50) => api.get('/observability/traces', { params: { limit } }).then(r => r.data);
+export const getObservabilityHealth = () => api.get('/observability/health').then(r => r.data);
+
 // ======================== Report ========================
 
 export const listReports = (params?: any) =>

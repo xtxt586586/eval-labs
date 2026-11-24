@@ -1,0 +1,64 @@
+{
+  "status": "completed_real_provider_diagnostic",
+  "judge_provider": "https://api.deepseek.com/v1",
+  "judge_model": "deepseek-chat",
+  "request_count": 9,
+  "request_count_upper_bound": 9,
+  "annotation_status": "illustrative_examples_require_human_review_before_claiming_calibration_evidence",
+  "human_annotation_requirement_met": false,
+  "diagnostic_only_ci_threshold_enforced": false,
+  "sample_count": 3,
+  "requested_sample_count": 3,
+  "error_count": 0,
+  "repeats": 3,
+  "mean_absolute_error": 0.0333,
+  "score_range": [
+    0.0,
+    1.0
+  ],
+  "repeat_score_variance": 0.0,
+  "mean_per_sample_repeat_score_variance": 0.0,
+  "failed_samples": [],
+  "samples": [
+    {
+      "index": 0,
+      "sample_hash": "40d57edd91587e841e0df012b7e1f25c0053c7f397ed61e25042ce011e83b948",
+      "expected_score": 1.0,
+      "observed_scores": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean_absolute_error": 0.0,
+      "repeat_score_variance": 0.0,
+      "attempted_requests": 3
+    },
+    {
+      "index": 1,
+      "sample_hash": "7d15c11bd54ce22d7b930fe16027c40abfe175ff76b63ba6a766e869f0fc7d22",
+      "expected_score": 0.0,
+      "observed_scores": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean_absolute_error": 0.0,
+      "repeat_score_variance": 0.0,
+      "attempted_requests": 3
+    },
+    {
+      "index": 2,
+      "sample_hash": "ed7b0a7d09144742d0e5a24dec551fbf4951b5f40c5bddfde79cfc7a6a682a37",
+      "expected_score": 0.5,
+      "observed_scores": [
+        0.6,
+        0.6,
+        0.6
+      ],
+      "mean_absolute_error": 0.1,
+      "repeat_score_variance": 0.0,
+      "attempted_requests": 3
+    }
+  ],
+  "raw_sample_text_persisted": false
+}

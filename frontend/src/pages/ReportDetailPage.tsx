@@ -26,53 +26,38 @@ const HelpTitle: React.FC<{ label: string; tip: string }> = ({ label, tip }) => 
 
 const layerHeaderCell = (group: MetricLayer, level: 'group' | 'metric' = 'group') => ({
   style: {
-    background: level === 'group' ? group.headerBg : group.subHeaderBg,
-    borderBottom: `2px solid ${group.headerBorder}`,
-    color: group.headerText,
+    background: level === 'group' ? 'var(--report-group-header)' : 'var(--report-metric-header)',
+    borderBottom: `1px solid var(--border-color)`,
+    borderTop: level === 'group' ? '2px solid var(--color-cyan)' : undefined,
+    color: 'var(--text-secondary)',
     fontWeight: 600,
   },
 });
 
 const renderLayerHeaderTitle = (group: MetricLayer) => (
-  <div style={{ lineHeight: 1.25 }}>
-    <div>
-      <Tag color={group.color} style={{ marginRight: 6 }}>{group.name}</Tag>
-    </div>
-    {group.description && (
-      <div
-        style={{
-          marginTop: 3,
-          color: group.headerText,
-          fontSize: 11,
-          fontWeight: 400,
-          opacity: 0.82,
-          whiteSpace: 'normal',
-        }}
-      >
-        （{group.description}）
-      </div>
-    )}
-  </div>
+  <Tooltip title={group.description}>
+    <Tag color={group.color} style={{ marginRight: 0 }}>{group.name}</Tag>
+  </Tooltip>
 );
 
 const formatScore = (score: any, metricName: string): { display: string; color: string; explain: string } => {
-  if (score === null || score === undefined) return { display: 'N/A', color: '#999', explain: '指标计算出错，无法得出分数' };
+  if (score === null || score === undefined) return { display: 'N/A', color: '#687973', explain: '指标计算出错，无法得出分数' };
   if (typeof score === 'string') {
     const pass = ['pass', 'yes', 'true', '1'].includes(score.toLowerCase());
-    return { display: score, color: pass ? '#52c41a' : '#ff4d4f', explain: pass ? '通过' : '不通过' };
+    return { display: score, color: pass ? '#397A52' : '#B34747', explain: pass ? '通过' : '不通过' };
   }
   const num = Number(score);
   const isBinary = ['agent_goal_accuracy', 'harmfulness', 'coherence'].includes(metricName);
   if (isBinary) {
     return num >= 0.5
-      ? { display: `${num}（是）`, color: '#52c41a', explain: '满足条件' }
-      : { display: `${num}（否）`, color: '#ff4d4f', explain: '不满足条件' };
+      ? { display: `${num}（是）`, color: '#397A52', explain: '满足条件' }
+      : { display: `${num}（否）`, color: '#B34747', explain: '不满足条件' };
   }
   const pct = (num * 100).toFixed(1);
-  let level = '优秀'; let color = '#52c41a';
-  if (num < 0.5) { level = '较差'; color = '#ff4d4f'; }
-  else if (num < 0.7) { level = '一般'; color = '#faad14'; }
-  else if (num < 0.9) { level = '良好'; color = '#1677ff'; }
+  let level = '优秀'; let color = '#397A52';
+  if (num < 0.5) { level = '较差'; color = '#B34747'; }
+  else if (num < 0.7) { level = '一般'; color = '#8A5B16'; }
+  else if (num < 0.9) { level = '良好'; color = '#326C9A'; }
   return { display: `${pct}%`, color, explain: `${level}（${num.toFixed(4)} / 1.0）` };
 };
 
@@ -285,8 +270,8 @@ const ReportDetailPage: React.FC = () => {
     }
   };
 
-  const passRateColor = (r: number) => r >= 0.8 ? '#52c41a' : r >= 0.6 ? '#faad14' : '#ff4d4f';
-  const deltaColor = (v?: number | null) => v == null ? '#999' : v > 0 ? '#52c41a' : v < 0 ? '#ff4d4f' : '#666';
+  const passRateColor = (r: number) => r >= 0.8 ? '#397A52' : r >= 0.6 ? '#8A5B16' : '#B34747';
+  const deltaColor = (v?: number | null) => v == null ? '#687973' : v > 0 ? '#397A52' : v < 0 ? '#B34747' : '#596B67';
   const formatPercent = (v?: number | null) => v == null ? '-' : `${(v * 100).toFixed(1)}%`;
   const formatDelta = (v?: number | null) => {
     if (v == null) return '-';
@@ -382,7 +367,7 @@ const ReportDetailPage: React.FC = () => {
           </Space>
         ),
         key: metric,
-        width: 130,
+        width: 92,
         onHeaderCell: () => layerHeaderCell(group, 'metric'),
         render: (_: unknown, record: EvalRowResult) => {
           const ms = record.metric_scores?.[metric];
@@ -820,7 +805,7 @@ const ReportDetailPage: React.FC = () => {
                     onHeaderCell: () => layerHeaderCell(group, 'metric'),
                     render: (_: unknown, r: any) => {
                       const level = r.explain.split('（')[0];
-                      const tagColor = r.color === '#52c41a' ? 'success' : r.color === '#ff4d4f' ? 'error' : r.color === '#faad14' ? 'warning' : 'processing';
+                      const tagColor = r.color === '#397A52' ? 'success' : r.color === '#B34747' ? 'error' : r.color === '#8A5B16' ? 'warning' : 'processing';
                       return <Tag color={tagColor}>{level}</Tag>;
                     },
                   },
@@ -977,7 +962,7 @@ const ReportDetailPage: React.FC = () => {
                     options={[{ label: '通过', value: 'pass' }, { label: '不通过', value: 'fail' }, { label: '错误', value: 'error' }]}
                   />
                 </Space>
-                <Table rowKey="id" loading={rowsLoading} columns={detailColumns} dataSource={rows} scroll={{ x: 'max-content' }}
+                <Table rowKey="id" loading={rowsLoading} columns={detailColumns} dataSource={rows} scroll={{ x: 1120 }}
                   pagination={{ current: page, pageSize, total: rowsTotal, showSizeChanger: true, showTotal: (t) => `共 ${t} 条`,
                     onChange: (p, ps) => { setPage(p); setPageSize(ps); },
                   }}

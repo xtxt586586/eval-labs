@@ -89,7 +89,7 @@ const ScenarioQuickCreateModal: React.FC<ScenarioQuickCreateModalProps> = ({
       okText="创建"
       cancelText="取消"
       width={760}
-      destroyOnClose
+      destroyOnHidden
     >
       <Form form={form} layout="vertical">
         <Form.Item name="name" label="场景名称" rules={[{ required: true, message: '请输入场景名称' }]}>
