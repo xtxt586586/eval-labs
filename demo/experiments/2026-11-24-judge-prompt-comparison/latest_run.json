@@ -1,0 +1,486 @@
+{
+  "status": "completed_real_provider_diagnostic",
+  "created_at": "2026-11-24T06:59:11.138959+00:00",
+  "annotation_status": "illustrative_rubric_not_human_annotated",
+  "human_annotation_requirement_met": false,
+  "dataset_hash": "2712b1fb46fe4a72dbd07a63835a8121324253103739c12e319359379afc201e",
+  "dataset_sample_count": 5,
+  "score_scale": {
+    "range": [
+      0.0,
+      1.0
+    ],
+    "meaning": "0 = 与参考事实冲突或没有支持；0.5 = 部分正确但遗漏关键内容；0.75 = 基本正确但有轻微遗漏；1 = 完整且有证据支持"
+  },
+  "provider": "openai",
+  "endpoint": "https://api.deepseek.com/v1",
+  "model": "deepseek-chat",
+  "temperature": 0.01,
+  "max_tokens": 1024,
+  "metric_engine_version": "agent-eval/v2",
+  "pricing_reference": {
+    "url": "https://api-docs.deepseek.com/quick_start/pricing",
+    "checked_date": "2026-11-24",
+    "configured_model_listed": false,
+    "configured_model_note": "The configured alias deepseek-chat is not listed on the current pricing page; actual route and exact bill rate are unverified.",
+    "flash_per_million_usd": {
+      "input_cache_miss_off_peak": 0.15,
+      "input_cache_miss_peak": 0.3,
+      "output_off_peak": 0.6,
+      "output_peak": 1.2
+    },
+    "pro_per_million_usd": {
+      "input_cache_miss_off_peak": 0.66,
+      "input_cache_miss_peak": 1.32,
+      "output_off_peak": 1.98,
+      "output_peak": 3.96
+    }
+  },
+  "repeats_per_sample": 2,
+  "planned_logical_calls": 20,
+  "variants": {
+    "A": {
+      "variant": "A",
+      "prompt_hash": "06e9151071568c1b652f474a04de58b25fdaa55dbd82060ac6cc721422c36ea1",
+      "configuration_hash": "53eee795591cd33bec0734a947e8deaea110884bdf7e5395033048b9e3749ca0",
+      "results": [
+        {
+          "sample_id": "rag-01-complete",
+          "sample_hash": "58210a4e90a8595284cb91d2daf508d7c11fcdb0b9a7d1de632c1e54a4c36a7d",
+          "reference_score": 1.0,
+          "reference_rationale": "回答覆盖参考答案的两个关键点：嵌入式、无需独立服务器；检索上下文直接支持两点。",
+          "calls": [
+            {
+              "repeat": 1,
+              "score": 1.0,
+              "reason": "回答明确指出 SQLite 是嵌入式关系型数据库、通过库直接访问文件、无需独立服务器，与参考答案及检索证据完全一致，信息正确且完整。",
+              "elapsed_ms": 11932.79,
+              "sdk_create_calls_observed": 1,
+              "usage": {
+                "input_tokens": 386,
+                "output_tokens": 47,
+                "total_tokens": 433
+              }
+            },
+            {
+              "repeat": 2,
+              "score": 1.0,
+              "reason": "回答与参考答案一致，正确指出 SQLite 是嵌入式关系型数据库、无需独立服务器进程，且“应用进程通过库直接访问数据库文件”得到 retrieved_contexts 中“进程内库直接读写数据库文件”的支持，信息完整无冲突。",
+              "elapsed_ms": 1336.48,
+              "sdk_create_calls_observed": 1,
+              "usage": {
+                "input_tokens": 386,
+                "output_tokens": 67,
+                "total_tokens": 453
+              }
+            }
+          ],
+          "successful_repeats": 2,
+          "failed_repeats": 0,
+          "sample_complete": true,
+          "mean_score": 1.0,
+          "absolute_error": 0.0,
+          "repeat_population_variance": 0.0,
+          "repeat_range": 0.0
+        },
+        {
+          "sample_id": "rag-02-contradiction",
+          "sample_hash": "580326c665526d5d71b39a319e985711527c68c721014d32e9f88ef1f4a337aa",
+          "reference_score": 0.0,
+          "reference_rationale": "回答把可选持久化错误表述为运行必需条件，并与参考结论相反。",
+          "calls": [
+            {
+              "repeat": 1,
+              "score": 0.0,
+              "reason": "回答称“必须把全部数据写入磁盘后才能提供服务”，与参考答案“磁盘持久化不是其运行的必需条件”及检索证据“主要保存在内存中，持久化为可选机制”直接冲突，核心事实错误。",
+              "elapsed_ms": 715.92,
+              "sdk_create_calls_observed": 1,
+              "usage": {
+                "input_tokens": 381,
+                "output_tokens": 58,
+                "total_tokens": 439
+              }
+            },
+            {
+              "repeat": 2,
+              "score": 0.0,
+              "reason": "回答称 Redis 必须把全部数据写入磁盘后才能提供服务，与参考答案“磁盘持久化不是运行必需条件”及检索证据“主要保存在内存中、持久化为可选机制”直接冲突，核心事实错误。",
+              "elapsed_ms": 666.64,
+              "sdk_create_calls_observed": 1,
+              "usage": {
+                "input_tokens": 381,
+                "output_tokens": 56,
+                "total_tokens": 437
+              }
+            }
+          ],
+          "successful_repeats": 2,
+          "failed_repeats": 0,
+          "sample_complete": true,
+          "mean_score": 0.0,
+          "absolute_error": 0.0,
+          "repeat_population_variance": 0.0,
+          "repeat_range": 0.0
+        },
+        {
+          "sample_id": "rag-03-partial",
+          "sample_hash": "5d12c77b6df60282775c99471506c27f03f668782c2e3d01791259524bbc3868",
+          "reference_score": 0.5,
+          "reference_rationale": "401 部分解释正确，但完全遗漏问题另一半的 403 授权拒绝语义。",
+          "calls": [
+            {
+              "repeat": 1,
+              "score": 0.5,
+              "reason": "回答正确说明了401与认证凭据有关，但完全遗漏了403的含义，而参考答案和检索证据均包含403 Forbidden的说明，覆盖不完整。",
+              "elapsed_ms": 887.35,
+              "sdk_create_calls_observed": 1,
+              "usage": {
+                "input_tokens": 377,
+                "output_tokens": 47,
+                "total_tokens": 424
+              }
+            },
+            {
+              "repeat": 2,
+              "score": 0.5,
+              "reason": "回答正确说明401与认证凭据有关，但遗漏了403的含义，未覆盖参考答案中403表示服务器理解请求但拒绝授权访问这一核心信息，属于部分正确且不完整。",
+              "elapsed_ms": 1075.96,
+              "sdk_create_calls_observed": 1,
+              "usage": {
+                "input_tokens": 377,
+                "output_tokens": 53,
+                "total_tokens": 430
+              }
+            }
+          ],
+          "successful_repeats": 2,
+          "failed_repeats": 0,
+          "sample_complete": true,
+          "mean_score": 0.5,
+          "absolute_error": 0.0,
+          "repeat_population_variance": 0.0,
+          "repeat_range": 0.0
+        },
+        {
+          "sample_id": "rag-04-minor-omission",
+          "sample_hash": "0c76df89096b116772d484a9ee29e7a4c186fb0349a41b9562924458e554aa43",
+          "reference_score": 0.75,
+          "reference_rationale": "核心版本边界和顺序保证正确，但省略 CPython 3.6 的历史限定。",
+          "calls": [
+            {
+              "repeat": 1,
+              "score": 0.5,
+              "reason": "回答正确指出3.7起按插入顺序迭代，与参考答案和证据一致；但遗漏了参考答案中CPython 3.6仅为实现细节这一要点，覆盖不完整。",
+              "elapsed_ms": 672.24,
+              "sdk_create_calls_observed": 1,
+              "usage": {
+                "input_tokens": 408,
+                "output_tokens": 52,
+                "total_tokens": 460
+              }
+            },
+            {
+              "repeat": 2,
+              "score": 0.5,
+              "reason": "回答正确指出3.7起按插入顺序迭代，与参考答案和证据一致；但遗漏了CPython 3.6已保留插入顺序但属实现细节这一关键信息，覆盖不完整。",
+              "elapsed_ms": 881.48,
+              "sdk_create_calls_observed": 1,
+              "usage": {
+                "input_tokens": 408,
+                "output_tokens": 56,
+                "total_tokens": 464
+              }
+            }
+          ],
+          "successful_repeats": 2,
+          "failed_repeats": 0,
+          "sample_complete": true,
+          "mean_score": 0.5,
+          "absolute_error": 0.25,
+          "repeat_population_variance": 0.0,
+          "repeat_range": 0.0
+        },
+        {
+          "sample_id": "rag-05-evidence-gap",
+          "sample_hash": "7b05f5a8de0910da6afa46feb90083276668c3096bf851d72fe8768b41299134",
+          "reference_score": 0.0,
+          "reference_rationale": "绝对化结论与参考事实冲突；检索内容明确说明锁仍用于协调访问。",
+          "calls": [
+            {
+              "repeat": 1,
+              "score": 0.0,
+              "reason": "回答声称“任何查询和写入都永远不会等待锁”，与参考答案及检索证据中“PostgreSQL 仍有锁、DDL 需表级锁”直接冲突，核心事实错误。",
+              "elapsed_ms": 561.88,
+              "sdk_create_calls_observed": 1,
+              "usage": {
+                "input_tokens": 406,
+                "output_tokens": 53,
+                "total_tokens": 459
+              }
+            },
+            {
+              "repeat": 2,
+              "score": 0.0,
+              "reason": "回答声称“任何查询和写入都永远不会等待锁”，与参考答案及检索证据中“PostgreSQL 仍有锁、DDL 需表级锁”直接冲突，核心事实错误。",
+              "elapsed_ms": 1384.45,
+              "sdk_create_calls_observed": 1,
+              "usage": {
+                "input_tokens": 406,
+                "output_tokens": 53,
+                "total_tokens": 459
+              }
+            }
+          ],
+          "successful_repeats": 2,
+          "failed_repeats": 0,
+          "sample_complete": true,
+          "mean_score": 0.0,
+          "absolute_error": 0.0,
+          "repeat_population_variance": 0.0,
+          "repeat_range": 0.0
+        }
+      ],
+      "summary": {
+        "requested_samples": 5,
+        "successful_samples": 5,
+        "failed_samples": 0,
+        "mean_absolute_error": 0.05,
+        "mean_within_sample_population_variance": 0.0,
+        "mean_within_sample_range": 0.0
+      }
+    },
+    "B": {
+      "variant": "B",
+      "prompt_hash": "ad449ed25d7e7a8ac109d241649cc2e18389b4f2fdf360cd691a442ec0be2ac0",
+      "configuration_hash": "df8a39ffb5d875f22e4bb4ef508d2fc88bd1db7e3a929719fad05720a521fe4b",
+      "results": [
+        {
+          "sample_id": "rag-01-complete",
+          "sample_hash": "58210a4e90a8595284cb91d2daf508d7c11fcdb0b9a7d1de632c1e54a4c36a7d",
+          "reference_score": 1.0,
+          "reference_rationale": "回答覆盖参考答案的两个关键点：嵌入式、无需独立服务器；检索上下文直接支持两点。",
+          "calls": [
+            {
+              "repeat": 1,
+              "score": 1.0,
+              "reason": "response 覆盖了 reference 的全部必要事实：嵌入式关系型数据库、无独立服务器进程（表述为不需要单独运行数据库服务器），且与 retrieved_contexts 中“进程内库直接读写数据库文件、不需要独立数据库服务器”直接一致，无矛盾或遗漏。",
+              "elapsed_ms": 1427.89,
+              "sdk_create_calls_observed": 1,
+              "usage": {
+                "input_tokens": 432,
+                "output_tokens": 70,
+                "total_tokens": 502
+              }
+            },
+            {
+              "repeat": 2,
+              "score": 1.0,
+              "reason": "response 覆盖了 reference 的全部必要事实：嵌入式关系型数据库、无独立服务器进程（表述为不需要单独运行数据库服务器），且与 retrieved_contexts 中“进程内库直接读写数据库文件、不需要独立数据库服务器”直接一致，无矛盾或遗漏。",
+              "elapsed_ms": 914.52,
+              "sdk_create_calls_observed": 1,
+              "usage": {
+                "input_tokens": 432,
+                "output_tokens": 70,
+                "total_tokens": 502
+              }
+            }
+          ],
+          "successful_repeats": 2,
+          "failed_repeats": 0,
+          "sample_complete": true,
+          "mean_score": 1.0,
+          "absolute_error": 0.0,
+          "repeat_population_variance": 0.0,
+          "repeat_range": 0.0
+        },
+        {
+          "sample_id": "rag-02-contradiction",
+          "sample_hash": "580326c665526d5d71b39a319e985711527c68c721014d32e9f88ef1f4a337aa",
+          "reference_score": 0.0,
+          "reference_rationale": "回答把可选持久化错误表述为运行必需条件，并与参考结论相反。",
+          "calls": [
+            {
+              "repeat": 1,
+              "score": 0.0,
+              "reason": "response 声称 Redis 必须把全部数据写入磁盘才能提供服务，与 reference 中“磁盘持久化不是其运行的必需条件”直接矛盾，也与 retrieved_contexts 中“主要保存在内存中，并提供 RDB 和 AOF 等可选持久化机制”冲突，属于关键事实错误。",
+              "elapsed_ms": 900.98,
+              "sdk_create_calls_observed": 1,
+              "usage": {
+                "input_tokens": 427,
+                "output_tokens": 75,
+                "total_tokens": 502
+              }
+            },
+            {
+              "repeat": 2,
+              "score": 0.0,
+              "reason": "reference 的必要事实是 Redis 以内存为主、磁盘持久化非必需；response 却称必须把全部数据写入磁盘才能提供服务，与 reference 和 retrieved_contexts（可选持久化机制）直接矛盾，属关键事实错误。",
+              "elapsed_ms": 1081.43,
+              "sdk_create_calls_observed": 1,
+              "usage": {
+                "input_tokens": 427,
+                "output_tokens": 62,
+                "total_tokens": 489
+              }
+            }
+          ],
+          "successful_repeats": 2,
+          "failed_repeats": 0,
+          "sample_complete": true,
+          "mean_score": 0.0,
+          "absolute_error": 0.0,
+          "repeat_population_variance": 0.0,
+          "repeat_range": 0.0
+        },
+        {
+          "sample_id": "rag-03-partial",
+          "sample_hash": "5d12c77b6df60282775c99471506c27f03f668782c2e3d01791259524bbc3868",
+          "reference_score": 0.5,
+          "reference_rationale": "401 部分解释正确，但完全遗漏问题另一半的 403 授权拒绝语义。",
+          "calls": [
+            {
+              "repeat": 1,
+              "score": 0.5,
+              "reason": "response 正确覆盖了 401 与认证凭据相关的必要事实，且 retrieved_contexts 有直接支持；但完全遗漏了 403 表示服务器拒绝授权访问这一必要事实，属于只回答部分必要事实且无核心错误。",
+              "elapsed_ms": 723.19,
+              "sdk_create_calls_observed": 1,
+              "usage": {
+                "input_tokens": 423,
+                "output_tokens": 65,
+                "total_tokens": 488
+              }
+            },
+            {
+              "repeat": 2,
+              "score": 0.5,
+              "reason": "response 正确覆盖了 401 与认证凭据相关的必要事实，且有 retrieved_contexts 支持；但完全遗漏了 403 表示服务器拒绝执行请求这一必要事实，属于只回答部分必要事实且无核心错误。",
+              "elapsed_ms": 943.41,
+              "sdk_create_calls_observed": 1,
+              "usage": {
+                "input_tokens": 423,
+                "output_tokens": 63,
+                "total_tokens": 486
+              }
+            }
+          ],
+          "successful_repeats": 2,
+          "failed_repeats": 0,
+          "sample_complete": true,
+          "mean_score": 0.5,
+          "absolute_error": 0.0,
+          "repeat_population_variance": 0.0,
+          "repeat_range": 0.0
+        },
+        {
+          "sample_id": "rag-04-minor-omission",
+          "sample_hash": "0c76df89096b116772d484a9ee29e7a4c186fb0349a41b9562924458e554aa43",
+          "reference_score": 0.75,
+          "reference_rationale": "核心版本边界和顺序保证正确，但省略 CPython 3.6 的历史限定。",
+          "calls": [
+            {
+              "repeat": 1,
+              "score": 0.75,
+              "reason": "response 正确覆盖了核心必要事实“Python 3.7 起字典保持插入顺序”，且 retrieved_contexts 直接支持该说法；但 reference 中“CPython 3.6 该行为只是实现细节”这一必要事实被完全遗漏，属于非核心补充信息的缺失，故扣至 0.75。",
+              "elapsed_ms": 723.65,
+              "sdk_create_calls_observed": 1,
+              "usage": {
+                "input_tokens": 454,
+                "output_tokens": 84,
+                "total_tokens": 538
+              }
+            },
+            {
+              "repeat": 2,
+              "score": 0.75,
+              "reason": "response 正确覆盖了核心必要事实“Python 3.7 起字典保持插入顺序”，且 retrieved_contexts 直接支持该说法；但遗漏了 reference 中的次要事实“CPython 3.6 中该行为只是实现细节”，属于轻微非核心遗漏，故给 0.75。",
+              "elapsed_ms": 1435.1,
+              "sdk_create_calls_observed": 1,
+              "usage": {
+                "input_tokens": 454,
+                "output_tokens": 80,
+                "total_tokens": 534
+              }
+            }
+          ],
+          "successful_repeats": 2,
+          "failed_repeats": 0,
+          "sample_complete": true,
+          "mean_score": 0.75,
+          "absolute_error": 0.0,
+          "repeat_population_variance": 0.0,
+          "repeat_range": 0.0
+        },
+        {
+          "sample_id": "rag-05-evidence-gap",
+          "sample_hash": "7b05f5a8de0910da6afa46feb90083276668c3096bf851d72fe8768b41299134",
+          "reference_score": 0.0,
+          "reference_rationale": "绝对化结论与参考事实冲突；检索内容明确说明锁仍用于协调访问。",
+          "calls": [
+            {
+              "repeat": 1,
+              "score": 0.0,
+              "reason": "response 声称“任何查询和写入都永远不会等待锁”，与 reference 中“DDL、显式锁及并发写冲突仍可能等待”直接矛盾，也违背 retrieved_contexts 中“某些 DDL 操作需要取得表级锁”的证据，属于关键事实错误且缺少支持。",
+              "elapsed_ms": 623.87,
+              "sdk_create_calls_observed": 1,
+              "usage": {
+                "input_tokens": 452,
+                "output_tokens": 75,
+                "total_tokens": 527
+              }
+            },
+            {
+              "repeat": 2,
+              "score": 0.0,
+              "reason": "response 声称“任何查询和写入都永远不会等待锁”，与 reference 中“DDL、显式锁及并发写冲突仍可能等待”直接矛盾，且 retrieved_contexts 明确提到某些 DDL 需要表级锁，不支持“永不等待锁”的绝对化结论，属于关键事实错误。",
+              "elapsed_ms": 3914.75,
+              "sdk_create_calls_observed": 1,
+              "usage": {
+                "input_tokens": 452,
+                "output_tokens": 78,
+                "total_tokens": 530
+              }
+            }
+          ],
+          "successful_repeats": 2,
+          "failed_repeats": 0,
+          "sample_complete": true,
+          "mean_score": 0.0,
+          "absolute_error": 0.0,
+          "repeat_population_variance": 0.0,
+          "repeat_range": 0.0
+        }
+      ],
+      "summary": {
+        "requested_samples": 5,
+        "successful_samples": 5,
+        "failed_samples": 0,
+        "mean_absolute_error": 0.0,
+        "mean_within_sample_population_variance": 0.0,
+        "mean_within_sample_range": 0.0
+      }
+    }
+  },
+  "notes": [
+    "The bundled scores and rationales are illustrative rubric labels, not human annotations.",
+    "This run is diagnostic only; it is not a CI threshold or production accuracy claim."
+  ],
+  "started_at": "2026-11-24T06:59:11.140966+00:00",
+  "finished_at": "2026-11-24T06:59:44.604290+00:00",
+  "failed_samples": 0,
+  "successful_samples": 10,
+  "logical_calls_attempted": 20,
+  "observed_sdk_create_calls": 20,
+  "usage": {
+    "input_tokens": 8292,
+    "output_tokens": 1264,
+    "total_tokens": 9556
+  },
+  "cost_estimates_usd": {
+    "deepseek_v4_flash_off_peak": 0.0020022,
+    "deepseek_v4_flash_peak": 0.0040044,
+    "deepseek_v4_pro_off_peak": 0.00797544,
+    "deepseek_v4_pro_peak": 0.01595088,
+    "warning": "Estimates use listed model rates and assume cache-miss input. They do not confirm how the unlisted deepseek-chat alias is billed."
+  },
+  "raw_sample_text_persisted": false
+}
