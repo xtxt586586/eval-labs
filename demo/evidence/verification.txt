@@ -85,7 +85,6 @@ npm warn allow-scripts   esbuild@0.21.5 (postinstall: node install.js)
 npm warn allow-scripts
 npm warn allow-scripts Run `npm approve-scripts --allow-scripts-pending` to review, or `npm approve-scripts <pkg>` to allow.
 
-> eval-labs-frontend@0.1.0 build
 > tsc -b && vite build
 
 vite v5.4.21 building for production...
