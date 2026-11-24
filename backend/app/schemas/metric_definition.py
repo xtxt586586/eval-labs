@@ -28,6 +28,8 @@ class MetricResponse(BaseModel):
     config: Optional[Dict] = None
     category: Optional[str] = None
     is_builtin: bool
+    version: int = 1
     created_at: datetime
+    updated_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)

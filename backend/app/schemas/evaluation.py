@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any, Dict, List, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.schemas.dataset import DatasetRowResponse
 from app.schemas.sensitive import redact_sensitive_mapping
@@ -29,19 +29,25 @@ class EvalTaskCreate(BaseModel):
 
 class JudgeCalibrationExample(BaseModel):
     sample: Dict[str, Any]
-    expected_score: float
+    expected_score: float = Field(ge=0.0, le=1.0)
 
 
 class JudgeCalibrationRequest(BaseModel):
     llm_config_id: int
     metric_definition_id: int
-    examples: List[JudgeCalibrationExample]
-    repeats: int = 1
+    examples: List[JudgeCalibrationExample] = Field(min_length=1, max_length=50)
+    repeats: int = Field(default=1, ge=1, le=3)
 
 
 class JudgeCalibrationResponse(BaseModel):
+    id: Optional[int] = None
     metric_name: str
+    llm_config_version: Optional[int] = None
+    metric_definition_version: Optional[int] = None
+    engine_version: Optional[str] = None
+    requested_sample_count: int = 0
     sample_count: int
+    error_count: int = 0
     repeats: int
     mean_absolute_error: Optional[float] = None
     mean_score: Optional[float] = None
@@ -51,18 +57,27 @@ class JudgeCalibrationResponse(BaseModel):
 
 class AgentSandboxRequest(BaseModel):
     trajectory: Any
-    tools: List[Dict[str, Any]] = []
-    initial_state: Dict[str, Any] = {}
-    safety_policy: Dict[str, Any] = {}
+    tools: List[Dict[str, Any]] = Field(default_factory=list)
+    initial_state: Dict[str, Any] = Field(default_factory=dict)
+    expected_state: Optional[Dict[str, Any]] = None
+    expected_tool_results: Optional[List[Any]] = None
+    expected_side_effects: Optional[List[Any]] = None
+    safety_policy: Dict[str, Any] = Field(default_factory=dict)
 
 
 class AgentSandboxResponse(BaseModel):
     passed: bool
-    violations: List[str] = []
-    tool_results: List[Dict[str, Any]] = []
-    actual_state: Dict[str, Any] = {}
-    side_effects: List[Any] = []
-    safety: Dict[str, Any] = {}
+    violations: List[str] = Field(default_factory=list)
+    tool_results: List[Dict[str, Any]] = Field(default_factory=list)
+    blocked_calls: List[Dict[str, Any]] = Field(default_factory=list)
+    actual_state: Dict[str, Any] = Field(default_factory=dict)
+    side_effects: List[Any] = Field(default_factory=list)
+    safety_events: List[Dict[str, Any]] = Field(default_factory=list)
+    state_check: Optional[Dict[str, Any]] = None
+    tool_result_check: Optional[Dict[str, Any]] = None
+    side_effect_check: Optional[Dict[str, Any]] = None
+    trajectory: Dict[str, Any] = Field(default_factory=dict)
+    safety: Dict[str, Any] = Field(default_factory=dict)
 
 
 class EvalDebugRequest(EvalTaskCreate):

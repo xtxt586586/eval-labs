@@ -29,6 +29,7 @@ def test_create_dataset(client):
     assert body["id"] is not None
     assert len(body["field_schema"]) == 3
     assert body["field_schema"][0]["name"] == "user_input"
+    assert body["version"] == 1
 
 
 def test_add_row(client):
@@ -43,6 +44,7 @@ def test_add_row(client):
     assert body["data"]["response"] == "Hi"
     assert body["dataset_id"] == ds_id
     assert body["row_index"] == 0
+    assert client.get(f"/api/datasets/{ds_id}").json()["version"] == 2
 
 
 def test_list_rows(client):

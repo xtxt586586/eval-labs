@@ -36,6 +36,7 @@ class LLMConfigResponse(BaseModel):
     temperature: float
     max_tokens: int
     is_default: bool
+    version: int = 1
     created_at: datetime
     updated_at: Optional[datetime] = None
 

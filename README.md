@@ -1,299 +1,140 @@
-# AI Evaluation Platform
+# Eval Labs
 
-[English](README.md) | [简体中文](README.zh-CN.md)
+Eval Labs 是一个面向 RAG、Agent 和多轮对话应用的自托管评测工作台。它把数据集、场景标准、LLM Judge、确定性指标、接口运行、逐条报告和人工复核放在同一个流程里。
 
-Self-hosted AI evaluation workbench for RAG, AI Agents, multi-turn conversations, LLM-as-a-Judge, endpoint evaluation, reports, and human blind testing.
+![Eval Labs 评测工作台](docs/imgs/lab-workflow.png)
 
-[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
-[![Release](https://img.shields.io/github/v/release/huangyiminghappy/ai-eval-platform?include_prereleases&label=release)](https://github.com/huangyiminghappy/ai-eval-platform/releases)
-[![Backend](https://img.shields.io/badge/backend-FastAPI-009688.svg)](backend)
-[![Frontend](https://img.shields.io/badge/frontend-React%20%2B%20Vite-61dafb.svg)](frontend)
-[![LLM](https://img.shields.io/badge/LLM-OpenAI--compatible-black.svg)](#configuration)
+## 架构
 
-AI Evaluation Platform helps teams evaluate LLM applications as an engineering workflow instead of a one-off metric script. It connects dataset management, scenario presets, native metrics, OpenAI-compatible judge models, live endpoint evaluation, report analysis, manual review, and A/B blind testing in one Web UI.
+```mermaid
+flowchart LR
+  UI[React + TypeScript UI] --> API[FastAPI]
+  API --> DB[(SQLite 默认 / PostgreSQL)]
+  API --> Q[数据库任务状态与租约]
+  Q --> W[API 进程内线程池 worker]
+  W --> M[确定性指标]
+  W --> J[OpenAI 兼容 Judge]
+  W --> EP[被测 Endpoint]
+  M --> R[报告与逐条证据]
+  J --> R
+  EP --> R
+```
 
-## Screenshots
+当前 worker 运行在 API 进程内，使用数据库原子领取、心跳和过期租约恢复；没有独立 broker/worker 服务，因此尚不能独立扩缩容。Agent 沙箱只按声明式 fixtures 回放工具结果、状态变更和副作用，**不运行任意 Agent 代码，也不调用真实工具或外部服务**。
 
-### Evaluation Workbench
+## 一键复现
 
-Configure dataset, scenario, judge model, endpoint target, metric overrides, debug validation, and task creation in one workflow.
+要求 Python 3.12、Node.js 20+ 和 npm。此演示不需要真实 API Key、数据库服务或模型缓存。
 
-![Evaluation workbench](docs/imgs/lab-workflow.png)
+Windows PowerShell：
 
-### Evaluation Scenarios
+```powershell
+.\scripts\setup.ps1
+```
 
-Use built-in scenario templates for RAG, Agent, and multi-turn conversation evaluation. Teams can adjust metrics, weights, thresholds, and prompt overrides.
-
-![Evaluation scenarios](docs/imgs/use%20cases.png)
-
-### Custom Datasets
-
-Model single-turn samples, multi-turn conversations, retrieved contexts, tool calls, reference answers, and custom business fields.
-
-![Custom dataset](docs/imgs/mul-dataset.png)
-
-### LLM Judge Configuration
-
-Configure judge models through OpenAI-compatible endpoints, including Qwen, GPT-compatible services, and private compatible gateways.
-
-![LLM judge configuration](docs/imgs/LLM-judge.png)
-
-### Evaluation Execution
-
-Run offline evaluation on existing outputs or live endpoint evaluation by calling saved Chat, RAG, or Agent APIs.
-
-![Evaluation execution](docs/imgs/eval.png)
-
-### Reports
-
-Inspect task status, pass rate, metric summaries, report comparison entry points, and evaluation progress.
-
-![Evaluation report](docs/imgs/report.png)
-
-### Report Detail
-
-Review row-level metric scores, judge reasons, pass/fail status, endpoint traces, and manual review fields.
-
-![Report detail](docs/imgs/reportDetail.png)
-
-### Human Blind Test
-
-Compare two LLM or endpoint outputs with randomized display order, human votes, and summary statistics.
-
-![Blind test](docs/imgs/blind-test.png)
-
-## Why This Project
-
-Many evaluation tools focus on only one part of the workflow: metric calculation, synthetic dataset generation, or prompt-level experiments. This project is designed as a product-oriented evaluation workbench.
-
-- Web UI for datasets, scenarios, metrics, execution, reports, manual review, and blind tests.
-- Offline evaluation and live endpoint evaluation for Chat, RAG, and Agent services.
-- Built-in metrics for RAG, Agent, and multi-turn conversations, with custom judge prompts.
-- Human blind testing and manual review for release decisions beyond automatic scores.
-- Lightweight SQLite quick start, with SQLAlchemy `DATABASE_URL` support for PostgreSQL and other relational databases.
-
-Compared with library-first tools such as Ragas, rag_eval, or dataset-focused tools, this platform emphasizes repeatable evaluation operations: collect samples, freeze scenario snapshots, run comparable tasks, inspect row-level reasons, and combine automatic judging with human decisions.
-
-## Feature Highlights
-
-| Area | What It Provides |
-|------|------------------|
-| Dataset management | Single-turn rows, multi-turn conversations, RAG contexts, tool calls, CSV/JSON import and export |
-| RAG evaluation | Faithfulness, Context Recall, Context Precision, Answer Relevancy, HitRate@K, MRR, and more |
-| Agent evaluation | Task Completion, Tool Correctness, Argument Correctness, Step Efficiency, Goal Accuracy |
-| Multi-turn evaluation | Topic Adherence, Turn Relevancy, Conversation Completeness, Knowledge Retention, Role Adherence |
-| Live endpoint evaluation | Call a target endpoint, extract response/contexts/tool calls, and evaluate the result directly |
-| Human blind testing | Compare LLM vs LLM, endpoint vs endpoint, or LLM vs endpoint outputs |
-| Reports and review | Task progress, summary score, row-level judge reasons, manual status, and report comparison |
-| OpenAI-compatible judge | Default Qwen Plus through DashScope compatible mode; replaceable with any compatible chat model |
-
-## Core Scenarios
-
-### RAG Evaluation
-
-Evaluate retrieval and generation together:
-
-- Retrieval quality: Context Recall, Context Precision, Contextual Relevancy.
-- Generation trust: Faithfulness and Factual Correctness.
-- Answer quality: Answer Relevancy and Answer Completeness.
-- Retrieval unit checks: HitRate@K and MRR when document IDs are available.
-
-### Agent Evaluation
-
-Evaluate whether an Agent completes the task through correct tool use:
-
-- Task Completion and Goal Accuracy.
-- Tool Correctness.
-- Argument Correctness.
-- Step Efficiency.
-
-This is useful for customer-service agents, task execution agents, workflow agents, and tool-calling systems.
-
-### Multi-Turn Conversation Evaluation
-
-Evaluate conversation stability across turns:
-
-- Topic Adherence.
-- Turn Relevancy.
-- Conversation Completeness.
-- Knowledge Retention.
-- Role Adherence.
-
-This is useful for customer support bots, enterprise assistants, and continuous Q&A systems.
-
-### Endpoint A/B Blind Test
-
-Compare two response sources with human preference:
-
-- LLM config vs LLM config.
-- Endpoint vs endpoint.
-- LLM config vs endpoint.
-
-This is useful before releasing a new model, RAG service, prompt version, or Agent implementation.
-
-## Result Output
-
-Each completed evaluation produces:
-
-- Overall pass rate and metric summary.
-- Row-level score, pass/fail status, judge reason, and execution time.
-- Endpoint trace for live endpoint evaluation.
-- Manual review status, score, tags, and notes.
-- Report comparison for regression checks.
-
-## Tech Stack
-
-| Layer | Stack |
-|-------|-------|
-| Backend | FastAPI, SQLAlchemy, Pydantic, SQLite by default |
-| Frontend | React 18, TypeScript, Ant Design 5, Vite |
-| Evaluation engine | Native metric executors plus OpenAI-compatible judge prompts |
-| Default judge model | Qwen Plus through DashScope compatible mode |
-
-## Quick Start
-
-### Prerequisites
-
-- Python 3.9+, Python 3.11+ recommended
-- Node.js 18+
-- `uv` or `pip`
-- An OpenAI-compatible model API key, such as DashScope
-
-### 1. Configure Backend
+macOS/Linux：
 
 ```bash
+bash scripts/setup.sh
+```
+
+脚本创建隔离的演示数据库、安装依赖、构建前端、运行后端测试，并通过实际 API 导入五条 Agent 样本和运行确定性评测。演示数据与结果位于 `demo/data/` 和 `demo/runs/`；本地数据库保存在 `demo/state/`，已由 `.gitignore` 排除。
+
+若要在浏览器打开刚生成的演示库，PowerShell 终端先设置隔离库路径并启动 API：
+
+```powershell
+$env:DATABASE_URL = "sqlite:///" + ((Resolve-Path demo/state/eval_demo.db).Path -replace "\\", "/")
+$env:UPLOAD_DIR = (Resolve-Path demo/state).Path + "\uploads"
+$env:SEED_ON_STARTUP = "true"
+$env:LLM_API_KEY = ""
 cd backend
-cp .env.example .env
+..\.venv\Scripts\python.exe run.py
 ```
 
-Edit `backend/.env`:
+另开终端启动前端：
 
-```bash
-LLM_API_KEY=your-api-key
-LLM_ENDPOINT=https://dashscope.aliyuncs.com/compatible-mode/v1
-LLM_MODEL=qwen-plus
-```
-
-Install dependencies:
-
-```bash
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-```
-
-Start the backend:
-
-```bash
-python3 run.py
-```
-
-Open:
-
-```text
-http://localhost:8000/docs
-```
-
-### 2. Start Frontend
-
-```bash
+```powershell
 cd frontend
-npm install
 npm run dev
 ```
 
-Open:
-
-```text
-http://localhost:5173
-```
-
-## Typical Workflow
-
-```text
-1. Configure a Judge LLM
-2. Create or import datasets
-3. Select a scenario: RAG, Agent, or multi-turn conversation
-4. Run offline evaluation or live endpoint evaluation
-5. Inspect report summaries, row-level reasons, and failures
-6. Use manual review or blind test results for release decisions
-```
-
-## Roadmap
-
-The first public release focuses on a complete local evaluation workflow. Upcoming work will make the project easier to deploy, operate, and extend in team environments.
-
-- v0.2: Docker Compose quick start, GitHub Actions CI, and release checklist automation.
-- v0.3: Alembic migrations, richer PostgreSQL deployment guidance, and indexes for larger evaluation datasets.
-- v0.4: Authentication, RBAC, audit logs, and encrypted storage for sensitive fields.
-- v0.5: More built-in scenario templates, import/export examples, and benchmark datasets.
-- Later: SDK/CLI integration, pluggable judge providers, observability integration, and public demo assets.
-
-## Documentation
-
-- [Usage Guide](docs/usage-guide.md)
-- [Evaluation Guide](docs/evaluation-guide.md)
-- [Open Source Readiness](docs/open-source-readiness.md)
-- [Database and Storage](docs/database-and-storage.md)
-- [Comparison](docs/comparison.md)
-- [Changelog](CHANGELOG.md)
-
-## Configuration
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `LLM_API_KEY` | Judge model API key | Required for real LLM calls |
-| `LLM_MODEL` | Judge model name | `qwen-plus` |
-| `LLM_ENDPOINT` | OpenAI-compatible API endpoint | DashScope compatible endpoint |
-| `DATABASE_URL` | SQLAlchemy database URL | `sqlite:///./eval_platform.db` |
-| `UPLOAD_DIR` | Uploaded document directory | `./uploads` |
-| `CORS_ORIGINS` | Allowed frontend origins | `["http://localhost:5173"]` |
-| `SEED_ON_STARTUP` | Seed demo data at startup | `true` |
-| `RUN_EVAL_ON_CREATE` | Run evaluation immediately after task creation | `true` |
-
-For production or shared team environments, prefer PostgreSQL:
+macOS/Linux：在仓库根目录的 API 终端运行：
 
 ```bash
-DATABASE_URL=postgresql+psycopg://user:password@localhost:5432/ai_eval_platform
-```
-
-See [Database and Storage](docs/database-and-storage.md) before changing the storage backend.
-
-## Development
-
-Backend tests:
-
-```bash
+export DATABASE_URL="sqlite:///$(pwd)/demo/state/eval_demo.db"
+export UPLOAD_DIR="$(pwd)/demo/state/uploads"
+export SEED_ON_STARTUP=true
+export LLM_API_KEY=
 cd backend
-source venv/bin/activate
-python3 -m pytest tests/ -v
+../.venv/bin/python run.py
 ```
 
-Frontend build:
+另开终端，在仓库根目录运行 `npm --prefix frontend run dev`。
 
-```bash
-cd frontend
+打开 `http://localhost:5173` 查看本地工作台。项目当前没有身份认证，演示无需登录；不要把服务暴露到非可信网络。
+
+演示账号：本地匿名访问，不需要用户名、密码或 Token。该项目当前没有认证层，因此这不是可用于生产的账号体系。
+
+## 固定演示流程
+
+1. `demo/data/agent_trajectories.json` 包含成功执行、错误工具、错误参数、状态未达成、违反安全策略五种轨迹。
+2. 脚本调用数据集导入 API 写入轨迹，再创建 `Tool Correctness`、`Argument Correctness`、`Step Efficiency`、`Tool Result`、`State Change` 和 `Safety Policy` 场景。
+3. 数据库任务队列执行离线评测；以上指标走代码确定性路径，不请求 LLM。报告保存各样本的分数、理由和通过状态。
+4. 查看 `demo/runs/latest.json` 比较五条固定预期与实际分数。
+
+### 评分证据
+
+- Tool Correctness 从 `user_input` / `trajectory` 中提取 `tool_calls[].name` 和 `tool_calls[].args`，与 `reference_tool_calls` 做完整工具名及参数匹配；每个期望调用匹配成功计入召回分。
+- Argument Correctness 先匹配工具名，再按期望参数键值匹配比例评分。
+- State Change 读取 `actual_state`，只对 `expected_state` 声明的键进行精确比较；未声明的额外键不影响分数，缺失或不相等记为 mismatch，分数为 `1 - mismatch_count / expected_key_count`。
+- Safety Policy 对 `safety_policy.forbidden_tools`、`max_tool_calls` 和轨迹中的 `safety_events` 检查；发现任一违规得 0，否则得 1。
+- 样本必须达到所有已配置指标阈值才通过；评分缺失或异常会判失败。默认演示阈值为 0.8。
+
+## Judge 校准与成本
+
+Judge 默认配置使用 DashScope 的 OpenAI 兼容接口和 `qwen-plus`；`demo/run_calibration.py` 会优先使用 `backend/.env` 中的 `LLM_ENDPOINT`、`LLM_MODEL` 和 `LLM_PROVIDER`，避免把一个供应商的 Key 发到另一个供应商。演示库中的校准样本目前是说明性示例，**尚未经过人工复核，不能称作 Human-annotated samples**；随附诊断结果也会标记该限制。真实校准应以人工复核的 0 到 1 分数作参照，对 LLM 指标重复评分，并计算 MAE、分数均值/方差和失败样本。它是诊断工具，当前**没有接入 CI 自动阈值或发布阻断**，不能保证评分准确。
+
+随附 3 个样本、每条重复 3 次时，预算按最多 **9 次模型请求**估算（每个样本/重复一次请求）；失败请求也可能计费。若按每次约 1,000 输入 token 和 100 输出 token 做容量估算，总量约 9,000 输入、900 输出 token。费用按实际供应商价格页的输入/输出单价计算。以当前本地 DeepSeek 配置为例，官方价格页按每百万 token 区分缓存命中、未命中和峰谷时段，容量估算公式为 `0.009 × 输入单价(美元/百万 token) + 0.0009 × 输出单价(美元/百万 token)`；运行前核对[DeepSeek 官方模型价格](https://api-docs.deepseek.com/quick_start/pricing)或你实际使用的供应商价格页。无 Key 确定性演示不会调用 Judge；真实校准脚本会拒绝空 Key，输出会区分真实模型请求与尚未人工复核的标签，不使用 mock 冒充外部评测。
+
+实际供应商诊断记录见 `demo/runs/calibration.json`：DeepSeek `deepseek-chat` 共调用 9 次，3/3 样本有效，MAE 为 **0.0333**，分数范围 **0–1**，平均逐样本重复评分方差 **0.000000**，失败样本 **0**。报告状态是 `completed_real_provider_diagnostic`，不是可信校准结论。三个标签都是构造的说明样例，未经过人类复核，所以这些数字只说明 API 和诊断计算链路真实跑通，**不构成基于 Human-annotated samples 的可信校准证据**。报告不保存原文，仅保存样本哈希和分数。完成可信校准仍需经人类标注者复核的样本。
+
+## 自动化验证
+
+```powershell
+cd backend
+..\.venv\Scripts\Activate.ps1
+python -m pytest tests -q
+cd ..\frontend
 npm run build
 ```
 
-## Security Notes
+CI 使用 Python 3.12、Node.js 20，运行后端测试与前端构建；关键路径不需要真实 API Key。`demo/evidence/verification.txt` 留存本次本地真实测试与构建输出，并非 GitHub Actions 截图或远端工作流记录。重新验证可运行：
 
-- Never commit `.env`, SQLite databases, uploaded files, WAL/SHM files, or local IDE metadata.
-- API keys and endpoint authorization headers are stored for execution but masked in API responses.
-- The current project is designed for trusted internal users. Add authentication, authorization, audit logs, and secret encryption before exposing it to untrusted networks.
-- Before publishing an existing Git history, scan and clean historical commits that may contain databases or secrets.
+```powershell
+python -m pytest backend/tests -q *> demo/runs/ci-backend.log
+npm --prefix frontend run build *> demo/runs/ci-frontend.log
+```
 
-See [SECURITY.md](SECURITY.md) for disclosure guidance.
+Judge 校准诊断（需要 `backend/.env` 中的真实 `LLM_API_KEY`，会产生供应商调用和费用）：
 
-## Community
+```powershell
+.venv\Scripts\python.exe demo/run_calibration.py
+```
 
-If this project is useful for your RAG, AI Agent, multi-turn conversation evaluation, or AI infrastructure work, a Star would be greatly appreciated. You are also welcome to watch the repository, open issues, contribute pull requests, or share real evaluation use cases.
+## 已知限制
 
-The author has years of hands-on backend engineering and architecture experience in large-scale internet systems, and has recently been working in AI Agent, AI infrastructure, LLM application evaluation, and production-oriented AI engineering. Feel free to reach out for technical discussions, feedback, or collaboration.
+- 没有用户认证、RBAC 或审计日志，不面向公网开放。
+- worker 与 API 同进程运行，任务队列不是 broker-backed 集群。
+- 本地 schema 升级不是 Alembic 版本化迁移；多人/生产部署建议 PostgreSQL 并补迁移验证。
+- Agent fixture sandbox 不是任意代码执行环境，也不能作为操作系统安全隔离边界。
+- LLM Judge 会受模型、Prompt、样本、温度和供应商变化影响；校准不能替代人工抽检或自动上线门禁。
+- 当前 npm 依赖审计仍有 4 条告警（3 moderate、1 high），主要涉及 Vite/esbuild 与 React Router 的跨主版本修复；当前演示构建通过，但依赖主版本升级和 UI 回归尚未完成。
+- Endpoint 评测会请求用户配置的 URL。部署时必须限制网络出口并阻止访问内网敏感地址。
 
-- WeChat: `huangyiminghappy`
-- Email: `huangyiminghappy@gmail.com`
+## 目录
 
-## License
-
-Apache License 2.0. See [LICENSE](LICENSE).
+- `backend/`：FastAPI API、指标、数据库 worker 与测试。
+- `frontend/`：React 工作台。
+- `demo/data/`：固定 Agent 轨迹、场景、指标、Judge 配置与待人工复核的校准样本。
+- `demo/runs/`：演示结果、校准状态和可留档构建输出。
+- `docs/`：使用、指标、安全与存储说明。

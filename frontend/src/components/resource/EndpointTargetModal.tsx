@@ -24,6 +24,9 @@ const defaultMapping = {
   retrieved_contexts_path: '',
   retrieved_context_ids_path: '',
   tool_calls_path: '',
+  tool_results_path: '',
+  safety_events_path: '',
+  trace_id_path: '',
 };
 
 const JsonTextArea: React.FC<React.ComponentProps<typeof TextArea>> = ({ className, ...props }) => (
@@ -168,7 +171,7 @@ const EndpointTargetModal: React.FC<EndpointTargetModalProps> = ({ open, target,
       title={target ? '编辑被测接口' : '新建被测接口'}
       width={1120}
       onCancel={onCancel}
-      destroyOnClose
+      destroyOnHidden
       className="endpoint-target-modal"
       footer={[
         <Button key="test" icon={<ExperimentOutlined />} loading={testing} onClick={testDraft}>
@@ -278,12 +281,27 @@ const EndpointTargetModal: React.FC<EndpointTargetModalProps> = ({ open, target,
               <Input placeholder="trace.side_effects" />
             </Form.Item>
           </Col>
+          <Col span={6}>
+            <Form.Item name={['response_mapping', 'tool_results_path']} label="工具返回字段">
+              <Input placeholder="trace.tool_results" />
+            </Form.Item>
+          </Col>
+          <Col span={6}>
+            <Form.Item name={['response_mapping', 'safety_events_path']} label="安全事件字段">
+              <Input placeholder="trace.safety_events" />
+            </Form.Item>
+          </Col>
+          <Col span={6}>
+            <Form.Item name={['response_mapping', 'trace_id_path']} label="Trace ID 字段">
+              <Input placeholder="trace_id" />
+            </Form.Item>
+          </Col>
         </Row>
         <Alert
           type="info"
           showIcon
           message="字段映射使用点路径，数组下标用数字"
-          description="例如 OpenAI 兼容接口的回答字段是 choices.0.message.content；httpbin 回显请求体时可以填 json.question。"
+          description="支持 OpenAI 兼容消息、Agent trajectory/events，以及 OpenTelemetry OTLP JSON resourceSpans/scopeSpans/spans；工具、结果、状态、副作用和安全事件会归一到统一轨迹。"
         />
       </Form>
     </Modal>

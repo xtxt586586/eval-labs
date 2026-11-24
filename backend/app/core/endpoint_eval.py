@@ -11,6 +11,7 @@ from app.core.prompt_manager import (
     DEFAULT_RESPONSE_PATH,
     render_template_value,
 )
+from app.core.agent_trajectory import canonical_trajectory, normalize_otel_spans
 
 
 def parse_json_object(value: str | None, default: dict[str, t.Any] | None = None) -> dict[str, t.Any]:
@@ -126,6 +127,7 @@ def extract_eval_fields(
         "actual_state": mapping.get("actual_state_path"),
         "side_effects": mapping.get("side_effects_path"),
         "safety_events": mapping.get("safety_events_path"),
+        "trace_id": mapping.get("trace_id_path"),
     }
 
     for field, path in path_by_field.items():
@@ -145,6 +147,21 @@ def extract_eval_fields(
 
     if "response" not in extracted and isinstance(raw_text, str) and raw_text.strip():
         extracted["response"] = raw_text.strip()
+
+    trajectory_source = extracted.get("trajectory") or response_payload.get("trajectory")
+    otel_spans = normalize_otel_spans(trajectory_source)
+    if otel_spans:
+        extracted["trajectory"] = trajectory_source
+    canonical = canonical_trajectory(
+        {**extracted, **({"user_input": extracted.get("user_input")} if extracted.get("user_input") is not None else {})},
+        {"trace_id": response_payload.get("trace_id"), "trajectory": trajectory_source, "extracted_fields": extracted},
+    )
+    for field in ("tool_calls", "tool_results", "actual_state", "side_effects", "safety_events"):
+        if field not in extracted:
+            value = canonical.get(field)
+            if value not in (None, []):
+                extracted[field] = value
+    extracted["canonical_trajectory"] = canonical
     return extracted, errors
 
 
@@ -169,8 +186,11 @@ async def _invoke_json(
     answer = _first_path(parsed_response, ["answer", "data.answer", "choices.0.message.content"])
     trajectory = _first_path(
         parsed_response,
-        ["trajectory", "data.trajectory", "trace", "data.trace", "messages"],
+        ["trajectory", "data.trajectory", "trace", "data.trace", "messages", "spans", "resourceSpans", "resource_spans"],
     )
+    otel_trace = parsed_response if normalize_otel_spans(parsed_response) else None
+    if otel_trace is not None:
+        trajectory = otel_trace
     tool_calls = _first_path(
         parsed_response,
         ["tool_calls", "data.tool_calls", "trace.tool_calls", "data.trace.tool_calls"],
@@ -182,7 +202,9 @@ async def _invoke_json(
         "parsed_response": parsed_response if isinstance(parsed_response, (dict, list)) else None,
         "answer": answer,
         "trajectory": trajectory,
+        "otel_trace": otel_trace,
         "tool_calls": tool_calls,
+        "trace_id": _first_path(parsed_response, ["trace_id", "traceId", "trace.id"]),
     }
 
 
@@ -219,18 +241,15 @@ async def _invoke_sse(
             if isinstance(maybe_final, str) and maybe_final:
                 final_answer = maybe_final
     answer = final_answer or "".join(answer_parts).strip()
-    tool_calls = [
-        item
-        for event in structured_events
-        if isinstance(event, dict)
-        for item in (
-            event.get("tool_calls")
-            or (event.get("data") or {}).get("tool_calls")
-            or (event.get("trace") or {}).get("tool_calls")
-            or []
-        )
-        if isinstance(item, dict)
-    ]
+    tool_calls = []
+    for event in structured_events:
+        if not isinstance(event, dict):
+            continue
+        data = event.get("data") if isinstance(event.get("data"), dict) else {}
+        trace = event.get("trace") if isinstance(event.get("trace"), dict) else {}
+        candidates = event.get("tool_calls") or data.get("tool_calls") or trace.get("tool_calls") or []
+        if isinstance(candidates, list):
+            tool_calls.extend(item for item in candidates if isinstance(item, dict))
     return {
         "status_code": status_code,
         "content_type": content_type,
@@ -239,6 +258,7 @@ async def _invoke_sse(
         "answer": answer,
         "trajectory": structured_events[:100],
         "tool_calls": tool_calls,
+        "trace_id": next((event.get("trace_id") or event.get("traceId") for event in structured_events if isinstance(event, dict) and (event.get("trace_id") or event.get("traceId"))), None),
     }
 
 

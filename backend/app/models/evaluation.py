@@ -31,6 +31,8 @@ class EvalTask(Base):
     dataset_snapshot = Column(JSON, nullable=True)
     llm_config_snapshot = Column(JSON, nullable=True)
     queue_attempts = Column(Integer, default=0)
+    worker_id = Column(String(200), nullable=True)
+    heartbeat_at = Column(DateTime, nullable=True)
     trace_id = Column(String(100), nullable=True)
     logs = Column(Text, default="")
 

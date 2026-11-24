@@ -10,6 +10,7 @@ from app.models.rag_dataset_job import (
     RagDatasetChunk,
     RagDatasetSample,
 )
+from app.models.calibration import JudgeCalibrationRun
 
 __all__ = [
     "LLMConfig",
@@ -27,4 +28,5 @@ __all__ = [
     "RagDatasetDocument",
     "RagDatasetChunk",
     "RagDatasetSample",
+    "JudgeCalibrationRun",
 ]

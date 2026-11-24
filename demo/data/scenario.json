@@ -1,0 +1,8 @@
+{
+  "name": "Eval Labs Deterministic Agent Demo",
+  "description": "五类固定轨迹回归：成功、错误工具、错误参数、状态未达成、安全违规。仅使用确定性指标，不调用 Judge API。",
+  "scene_type": "agent",
+  "sample_type": "multi_turn",
+  "metrics_config": "metrics.json",
+  "metric_threshold": 0.8
+}

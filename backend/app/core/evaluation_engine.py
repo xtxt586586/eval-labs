@@ -640,14 +640,21 @@ async def run_evaluation(task_id: int, session_factory) -> None:
         ts = datetime.now().strftime("%H:%M:%S")
         line = f"[{ts}] {msg}\n"
         task_obj.logs = (task_obj.logs or "") + line
-        logger.info(msg)
+        logger.info("task_id=%s trace_id=%s %s", task_obj.id, task_obj.trace_id or "-", msg)
 
     try:
         task = db.query(EvalTask).get(task_id)
         if task is None:
             logger.error("EvalTask %d not found -- aborting", task_id)
             return
-        task.queue_attempts = (task.queue_attempts or 0) + 1
+        if task.status == "cancelling":
+            task.status = "cancelled"
+            task.finished_at = datetime.now(timezone.utc)
+            task.worker_id = None
+            task.heartbeat_at = None
+            db.commit()
+            return
+        task.heartbeat_at = datetime.now(timezone.utc)
         db.commit()
 
         dataset = task.dataset
@@ -707,7 +714,6 @@ async def run_evaluation(task_id: int, session_factory) -> None:
             db.commit()
             raise RuntimeError(f"Dataset {dataset.id} has no rows")
 
-        task.status = "running"
         task.total_rows = total_rows
         task.completed_rows = 0
         task.progress = 0.0
@@ -722,13 +728,8 @@ async def run_evaluation(task_id: int, session_factory) -> None:
         _log(task, f"进度: 0/{total_rows} (0%)")
         db.commit()
 
-        _log(task, "正在构建原生评判 LLM 客户端...")
-        db.commit()
-        judge_client = OpenAIJudgeClient(llm_config)
-        _log(task, "✓ 评判 LLM 客户端构建成功")
-        db.commit()
-
         metrics: list[tuple[str, t.Any, ScenarioMetric]] = []
+        needs_judge = False
         for sm in scenario_metrics:
             metric_def: MetricDefinition = sm.metric_definition
             try:
@@ -738,6 +739,7 @@ async def run_evaluation(task_id: int, session_factory) -> None:
                     scenario_metric=sm,
                 )
                 metrics.append((metric_def.name, metric_instance, sm))
+                needs_judge = needs_judge or kind == "llm"
                 _log(task, f"✓ 指标 [{metric_def.display_name}] 构建成功 (类型: {kind})")
             except Exception as exc:
                 _log(task, f"✗ 指标 [{metric_def.display_name}] 构建失败: {exc}")
@@ -747,6 +749,17 @@ async def run_evaluation(task_id: int, session_factory) -> None:
             db.commit()
             raise RuntimeError("No metrics could be built for this scenario")
 
+        judge_client = None
+        if needs_judge:
+            _log(task, "正在构建原生评判 LLM 客户端...")
+            db.commit()
+            judge_client = OpenAIJudgeClient(llm_config)
+            _log(task, "✓ 评判 LLM 客户端构建成功")
+            db.commit()
+        else:
+            _log(task, "场景只包含确定性指标，不初始化 Judge 客户端。")
+            db.commit()
+
         _log(task, f"========== 开始逐行评测 ({total_rows} 条) ==========")
         db.commit()
 
@@ -754,12 +767,14 @@ async def run_evaluation(task_id: int, session_factory) -> None:
 
         for idx, dataset_row in enumerate(dataset_rows):
             db.refresh(task)
-            if task.status == "cancelled":
+            if task.status in {"cancelled", "cancelling"}:
                 _log(task, f"⚠ 用户取消评测，已完成 {idx}/{total_rows} 行")
                 db.commit()
                 break
 
             row_start = time.time()
+            task.heartbeat_at = datetime.now(timezone.utc)
+            db.commit()
             base_row_data: dict = dict(
                 getattr(dataset_row, "_evaluation_snapshot_data", None)
                 or dataset_row.data
@@ -778,11 +793,13 @@ async def run_evaluation(task_id: int, session_factory) -> None:
             if evaluation_mode == "endpoint":
                 try:
                     _log(task, "  ▸ 调用被测业务接口...")
+                    task.heartbeat_at = datetime.now(timezone.utc)
                     db.commit()
                     response_payload = await invoke_endpoint(
                         base_row_data,
                         task.target_config or {},
                     )
+                    task.heartbeat_at = datetime.now(timezone.utc)
                     extracted_fields, mapping_errors = extract_eval_fields(
                         response_payload,
                         task.response_mapping or {},
@@ -833,15 +850,17 @@ async def run_evaluation(task_id: int, session_factory) -> None:
                 if row_error and metric_scores.get(metric_name):
                     continue
                 db.refresh(task)
-                if task.status == "cancelled":
+                if task.status in {"cancelled", "cancelling"}:
                     _log(task, f"⚠ 用户取消评测，当前行停止在指标 [{metric_name}]")
                     db.commit()
                     break
 
                 _log(task, f"  ▸ 评测指标 [{metric_name}]...")
+                task.heartbeat_at = datetime.now(timezone.utc)
                 db.commit()
                 try:
                     result = await metric_instance.ascore(row_data, judge_client)
+                    task.heartbeat_at = datetime.now(timezone.utc)
                     val = result.value
                     if isinstance(val, (int, float)):
                         val = round(float(val), 4)
@@ -858,7 +877,7 @@ async def run_evaluation(task_id: int, session_factory) -> None:
                 await asyncio.sleep(0)
 
             db.refresh(task)
-            if task.status == "cancelled":
+            if task.status in {"cancelled", "cancelling"}:
                 _log(task, f"⚠ 用户取消评测，已完成 {idx}/{total_rows} 行")
                 db.commit()
                 break
@@ -892,9 +911,12 @@ async def run_evaluation(task_id: int, session_factory) -> None:
             await asyncio.sleep(0)
 
         db.refresh(task)
-        if task.status == "cancelled":
+        if task.status in {"cancelled", "cancelling"}:
             _log(task, "========== 评测已取消 ==========")
+            task.status = "cancelled"
             task.finished_at = datetime.now(timezone.utc)
+            task.worker_id = None
+            task.heartbeat_at = None
             db.commit()
         else:
             _log(task, "========== 计算汇总统计 ==========")
@@ -902,6 +924,8 @@ async def run_evaluation(task_id: int, session_factory) -> None:
             summary_scores = _compute_summary_scores(all_row_scores, metrics)
             task.status = "completed"
             task.finished_at = datetime.now(timezone.utc)
+            task.worker_id = None
+            task.heartbeat_at = None
             task.summary_scores = summary_scores
             task.progress = 1.0
 
@@ -920,9 +944,14 @@ async def run_evaluation(task_id: int, session_factory) -> None:
             db.rollback()
             task = db.query(EvalTask).get(task_id)
             if task is not None:
-                task.status = "failed"
-                task.error_message = str(exc)[:2000]
+                if task.status not in {"cancelled", "cancelling"}:
+                    task.status = "failed"
+                    task.error_message = str(exc)[:2000]
+                else:
+                    task.status = "cancelled"
                 task.finished_at = datetime.now(timezone.utc)
+                task.worker_id = None
+                task.heartbeat_at = None
                 _log(task, f"✗✗✗ 评测失败: {str(exc)[:500]}")
                 _log(task, "========== 评测异常终止 ==========")
                 db.commit()

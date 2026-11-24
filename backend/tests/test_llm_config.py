@@ -39,3 +39,17 @@ def test_llm_config_draft_smoke_test(client, monkeypatch):
     payload = resp.json()
     assert payload["success"] is True
     assert "测试模型" in payload["sample_output"]
+
+
+def test_llm_config_update_increments_version(client, test_llm_payload):
+    created = client.post("/api/llm-configs", json=test_llm_payload).json()
+    assert created["version"] == 1
+
+    updated = client.put(
+        f"/api/llm-configs/{created['id']}",
+        json={"model_name": "test-model-v2"},
+    )
+
+    assert updated.status_code == 200
+    assert updated.json()["model_name"] == "test-model-v2"
+    assert updated.json()["version"] == 2

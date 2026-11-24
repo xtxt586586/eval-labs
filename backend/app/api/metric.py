@@ -68,6 +68,7 @@ def update_metric(metric_id: int, payload: MetricUpdate, db: Session = Depends(g
     metric.metric_type = payload.metric_type
     metric.config = payload.config
     metric.category = payload.category
+    metric.version = (metric.version or 1) + 1
     db.commit()
     db.refresh(metric)
     return metric

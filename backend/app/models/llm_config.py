@@ -16,5 +16,6 @@ class LLMConfig(Base):
     temperature = Column(Float, default=0.01)
     max_tokens = Column(Integer, default=1024)
     is_default = Column(Boolean, default=False)
+    version = Column(Integer, nullable=False, default=1)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())

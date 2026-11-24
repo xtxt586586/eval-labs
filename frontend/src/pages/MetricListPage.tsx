@@ -10,12 +10,11 @@ import {
   Select,
   Space,
   Spin,
-  Table,
   Tag,
   Typography,
   message,
 } from 'antd';
-import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EditOutlined, PlusOutlined, ControlOutlined } from '@ant-design/icons';
 import type { MetricDefinition } from '../types';
 import * as api from '../services/api';
 
@@ -291,50 +290,125 @@ const MetricListPage: React.FC = () => {
 
   return (
     <Spin spinning={loading}>
-      <Space style={{ width: '100%', justifyContent: 'space-between', marginBottom: 16 }}>
-        <div>
-          <Title level={4} style={{ marginBottom: 4 }}>指标管理</Title>
-          <Text type="secondary">管理可复用的评测指标和默认评分规则。场景管理可按业务需要覆盖这里的默认规则。</Text>
-        </div>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreateModal}>
-          新建自定义指标
-        </Button>
-      </Space>
+      <div style={{ marginBottom: 24 }}>
+        <h2 style={{ margin: '0 0 8px', fontSize: 24 }}>指标管理</h2>
+        <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: 14 }}>
+          管理可复用的评测指标和默认评分规则。场景管理可按业务需要覆盖这里的默认规则。
+        </p>
+      </div>
 
-      <Alert
-        type="info"
-        showIcon
-        style={{ marginBottom: 16 }}
-        message="这里维护指标默认评分规则"
-        description={`默认评分规则适合放稳定、通用、可复用的判断标准。数值评分会自动参与平均分、通过率、失败样本和基线对比统计。当前共有 ${metrics.length} 个指标，其中 ${customCount} 个自定义指标。提示词支持 {user_input}、{reference}、{rubrics}、{response} 等变量。`}
-      />
-
-      <Card>
-        <Space wrap style={{ marginBottom: 16 }}>
-          <Input.Search
-            allowClear
-            placeholder="搜索展示名、唯一标识、分类、类型、说明"
-            style={{ width: 360 }}
-            value={keyword}
-            onChange={(event) => setKeyword(event.target.value)}
-          />
-          <Select
-            allowClear
-            placeholder="按分类筛选"
-            style={{ width: 180 }}
-            value={categoryFilter}
-            onChange={setCategoryFilter}
-            options={metricCategoryOptions}
-          />
-          <Text type="secondary">当前显示 {filteredMetrics.length} / {metrics.length} 个指标</Text>
-        </Space>
-        <Table
-          rowKey="id"
-          columns={columns}
-          dataSource={filteredMetrics}
-          pagination={{ pageSize: 10, showTotal: (total) => `共 ${total} 个指标` }}
+      <div style={{ display: 'flex', gap: 16, marginBottom: 20, alignItems: 'center' }}>
+        <Input.Search
+          allowClear
+          placeholder="搜索指标名称、分类或类型"
+          style={{ width: 320 }}
+          value={keyword}
+          onChange={(event) => setKeyword(event.target.value)}
         />
-      </Card>
+        <Select
+          allowClear
+          placeholder="按分类筛选"
+          style={{ width: 200 }}
+          value={categoryFilter}
+          onChange={setCategoryFilter}
+          options={metricCategoryOptions}
+        />
+        <Text type="secondary">
+          显示 {filteredMetrics.length} / {metrics.length} 个 • 自定义 {customCount}
+        </Text>
+        <div style={{ flex: 1 }} />
+        <Button type="primary" icon={<PlusOutlined />} onClick={openCreateModal}>
+          新建指标
+        </Button>
+      </div>
+
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
+        gap: 16,
+        marginBottom: 24
+      }}>
+        {filteredMetrics.map((metric) => (
+          <Card
+            key={metric.id}
+            style={{
+              cursor: 'pointer',
+              display: 'flex',
+              flexDirection: 'column',
+              transition: 'all 0.2s ease'
+            }}
+            hoverable
+          >
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
+                <h4 style={{ margin: 0, color: 'var(--text-primary)', fontSize: 15, fontWeight: 600 }}>
+                  {metric.display_name}
+                </h4>
+                <Tag color={metric.is_builtin ? 'blue' : 'purple'}>
+                  {metric.is_builtin ? '内置' : '自定义'}
+                </Tag>
+              </div>
+              <p style={{ margin: 0, fontSize: 12, color: 'var(--text-tertiary)' }}>
+                {metric.name}
+              </p>
+            </div>
+
+            <div style={{ marginBottom: 12, flex: 1 }}>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+                <Tag color="cyan">{typeLabelMap[metric.metric_type]}</Tag>
+                <Tag color="geekblue">{metric.category || '通用'}</Tag>
+              </div>
+              <p style={{
+                margin: 0,
+                fontSize: 13,
+                color: 'var(--text-secondary)',
+                lineHeight: 1.5,
+                minHeight: 36
+              }}>
+                {(metric.config?.prompt || metric.config?.definition || metric.config?.description)?.substring(0, 80)}...
+              </p>
+            </div>
+
+            <div style={{
+              display: 'flex',
+              gap: 8,
+              paddingTop: 12,
+              borderTop: '1px solid var(--border-color)'
+            }}>
+              <Button
+                size="small"
+                type="text"
+                icon={<EditOutlined />}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openEditModal(metric);
+                }}
+              >
+                编辑
+              </Button>
+              {!metric.is_builtin && (
+                <Popconfirm
+                  title="确认删除此自定义指标？"
+                  onConfirm={(e) => {
+                    e?.stopPropagation();
+                    handleDelete(metric);
+                  }}
+                >
+                  <Button
+                    size="small"
+                    danger
+                    type="text"
+                    icon={<DeleteOutlined />}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    删除
+                  </Button>
+                </Popconfirm>
+              )}
+            </div>
+          </Card>
+        ))}
+      </div>
 
       <Modal
         open={modalOpen}

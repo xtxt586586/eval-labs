@@ -7,6 +7,9 @@ class Settings(BaseSettings):
     CORS_ORIGINS: list[str] = ["http://localhost:5173"]
     SEED_ON_STARTUP: bool = True
     RUN_EVAL_ON_CREATE: bool = True
+    EVAL_QUEUE_WORKERS: int = 2
+    EVAL_TASK_LEASE_TIMEOUT_SECONDS: int = 900
+    EVAL_MAX_TASK_ATTEMPTS: int = 3
 
     DEFAULT_LLM_NAME: str = "Qwen Plus (通义千问)"
     LLM_PROVIDER: str = "openai"

@@ -16,10 +16,10 @@
 
 ### 0.1 启动后端
 
-```bash
-cd ai-eval-platform/backend
-source venv/bin/activate
-python3 run.py
+```powershell
+cd backend
+..\.venv\Scripts\Activate.ps1
+python run.py
 ```
 
 **验证后端**：打开 http://localhost:8000/docs ，看到 Swagger API 文档页面。
@@ -27,11 +27,11 @@ python3 run.py
 ### 0.2 启动前端
 
 ```bash
-cd ai-eval-platform/frontend
+cd frontend
 npm run dev
 ```
 
-**验证前端**：打开 http://localhost:5175 ，看到左侧有 6 个导航菜单的评测平台界面。
+**验证前端**：打开 http://localhost:5173 。当前界面以顶部「配置 / 执行 / 分析」工作流导航为主，也可从首页和资源菜单进入数据集、指标、场景、接口、LLM 配置、Agent 沙箱、Judge 校准和运行观测。
 
 ### 0.3 验证预置数据
 
@@ -103,7 +103,7 @@ npm run dev
 
 ### 1.3 创建人工盲测任务
 
-1. 点击左侧「人工盲测」
+1. 进入「人工盲测」页面
 2. 点击「创建盲测任务」
 3. 选择：
    - 数据集
@@ -227,7 +227,7 @@ Authorization 会预填当前默认值，但仍可手动修改。
 
 ### 步骤 1：创建评测任务
 
-1. 点击左侧「评测执行」
+1. 进入「评测执行」页面
 2. 在顶部表单中填写：
    - **任务名称**：`我的第一次评测`
    - **选择数据集**：下拉选 `RAG 示例数据集`
@@ -238,18 +238,18 @@ Authorization 会预填当前默认值，但仍可手动修改。
 ### 步骤 2：等待执行
 
 - 页面下方的任务列表会出现你的任务
-- 状态从 `pending` → `running`（显示进度条）→ `completed`
+- 状态通常从 `pending` → `running` → `completed`；失败为 `failed`。取消排队任务会直接变为 `cancelled`，取消运行中任务先显示 `cancelling`，worker 确认停止后才变为 `cancelled`。
 - 5 条数据大约需要 30 秒 ~ 2 分钟（取决于 LLM 响应速度）
-- 页面每 3 秒自动刷新进度
+- 页面自动刷新任务进度；具体刷新间隔以页面实现为准
 
 ### 步骤 3：查看报告
 
 评测完成后：
 1. 在任务列表中点击「查看报告」
-2. 或点击左侧「评测报告」，选择刚完成的评测
+2. 或进入「评测报告」页面，选择刚完成的评测
 
 **报告总览 Tab**：
-- 4 个统计卡片：通过率、总条数、通过数、不通过数
+- 汇总统计：通过率、样本数、通过数和失败数
 - 各指标得分表：Faithfulness / Context Recall / Context Precision / Answer Relevancy / Factual Correctness / Answer Completeness 的均值、最小、最大、通过率
 - 基本信息：任务名称、数据集、场景、LLM
 
@@ -555,3 +555,19 @@ CSV 中的 JSON 数组需要双引号转义：`"[""文本1"", ""文本2""]"`。�
 1. 编辑 `backend/.env` 中的 `LLM_API_KEY`
 2. 重启后端
 3. 或者在界面的「LLM 配置」中编辑，填入新的 API Key 保存
+
+---
+
+## 九、Agent 工具回放、Judge 校准与运行观测
+
+### Agent 沙箱
+
+进入「Agent 沙箱」，提交轨迹、工具定义和 fixture。每个 fixture 可声明工具返回值、状态 patch 和副作用；页面会展示轨迹回放、最终状态及安全策略检查。它是确定性的 fixture 回放，不会运行任意 Agent 代码，也不会真的调用外部工具或网络。
+
+### Judge 校准
+
+进入「Judge 校准」，选择 LLM 配置和 LLM 类型指标，提交包含样本及人工期望分数的标注案例，并设置重复评分次数。结果包含平均绝对误差、评分均值、方差和逐样本结果；校准结果用于人工判断 Judge 稳定性，不会自动阻止评测或发版。
+
+### 运行观测
+
+进入「运行观测」查看数据库与队列健康状态、排队/运行任务、累计行结果和近期任务耗时，并按任务 trace ID 检索任务元数据。这里观测的是平台评测任务，不是导出 Agent spans 到 OpenTelemetry Collector 的 tracing 后端。

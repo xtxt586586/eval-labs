@@ -27,12 +27,32 @@ Base = declarative_base()
 
 def ensure_runtime_schema() -> None:
     """Apply tiny SQLite-compatible schema additions for existing local DBs."""
+    inspector = inspect(engine)
+    table_names = inspector.get_table_names()
+
+    version_columns = {
+        "datasets": ("version", "ALTER TABLE datasets ADD COLUMN version INTEGER NOT NULL DEFAULT 1"),
+        "llm_configs": ("version", "ALTER TABLE llm_configs ADD COLUMN version INTEGER NOT NULL DEFAULT 1"),
+        "metric_definitions": ("version", "ALTER TABLE metric_definitions ADD COLUMN version INTEGER NOT NULL DEFAULT 1"),
+    }
+    with engine.begin() as connection:
+        current_tables = set(inspect(engine).get_table_names())
+        for table, (column, statement) in version_columns.items():
+            if table not in current_tables:
+                continue
+            columns = {item["name"] for item in inspect(engine).get_columns(table)}
+            if column not in columns:
+                connection.execute(text(statement))
 
     if not engine.dialect.name.startswith("sqlite"):
         return
-
-    inspector = inspect(engine)
-    table_names = inspector.get_table_names()
+    if "metric_definitions" in table_names:
+        metric_columns = {column["name"] for column in inspector.get_columns("metric_definitions")}
+        if "updated_at" not in metric_columns:
+            with engine.begin() as connection:
+                connection.execute(text("ALTER TABLE metric_definitions ADD COLUMN updated_at DATETIME"))
+                if "created_at" in metric_columns:
+                    connection.execute(text("UPDATE metric_definitions SET updated_at = created_at WHERE updated_at IS NULL"))
     if "eval_tasks" not in table_names:
         return
 
@@ -47,6 +67,8 @@ def ensure_runtime_schema() -> None:
         "dataset_snapshot": "ALTER TABLE eval_tasks ADD COLUMN dataset_snapshot JSON",
         "llm_config_snapshot": "ALTER TABLE eval_tasks ADD COLUMN llm_config_snapshot JSON",
         "queue_attempts": "ALTER TABLE eval_tasks ADD COLUMN queue_attempts INTEGER DEFAULT 0",
+        "worker_id": "ALTER TABLE eval_tasks ADD COLUMN worker_id VARCHAR(200)",
+        "heartbeat_at": "ALTER TABLE eval_tasks ADD COLUMN heartbeat_at DATETIME",
         "trace_id": "ALTER TABLE eval_tasks ADD COLUMN trace_id VARCHAR(100)",
     }
     missing_eval_task_sql = [

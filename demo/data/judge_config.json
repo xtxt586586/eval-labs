@@ -1,0 +1,9 @@
+{
+  "name": "Default Judge configuration (not used by deterministic demo)",
+  "provider": "openai-compatible",
+  "endpoint": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+  "model": "qwen-plus",
+  "api_key_env": "LLM_API_KEY",
+  "used_in_keyless_demo": false,
+  "note": "Calibration requires a real provider API key. No API key or fabricated Judge result is bundled."
+}
