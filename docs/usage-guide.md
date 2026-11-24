@@ -1,14 +1,12 @@
-# AI 评测平台操作手册
+# Eval Labs 操作手册
 
 > 本手册以实际操作为导向，按照"启动 → 验证 → 评测"的顺序编写，可直接对照操作。
 
 ---
 
-## 与 Ragas / DeepEval 的关系
+## 指标执行边界
 
-本项目当前不依赖 Ragas 或 DeepEval：后端依赖中没有安装它们，代码里也没有 import 或调用它们的服务。平台只是参考并对齐业界通用评测概念，例如 Ragas 常见的 RAG 指标、DeepEval 的 Agentic / RAG / Multi-Turn 指标分类。
-
-实际评分由平台原生实现：LLM 类指标通过你配置的 OpenAI-compatible 评判模型和本项目自己的 Judge Prompt 输出分数与理由；HitRate@K、MRR、工具正确性、参数正确性、步骤效率等确定性指标由后端代码直接计算。
+Eval Labs 使用平台内置执行器计算确定性指标，并通过配置的 OpenAI 兼容服务运行 LLM Judge。具体输入字段、评分标准、阈值与运行版本以评测场景快照和对应指标配置为准。
 
 ---
 

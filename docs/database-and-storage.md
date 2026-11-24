@@ -1,6 +1,6 @@
 # Database and Storage / 数据库与存储选型
 
-本文说明 AI Evaluation Platform 开源前后的数据库建议。结论先说：**SQLite 适合作为本地快速体验默认值，不建议作为多人协作或生产评测环境的长期存储。**
+本文说明 Eval Labs 的数据库建议。结论先说：**SQLite 适合作为本地快速体验默认值，不建议作为多人协作或生产评测环境的长期存储。**
 
 ## Current State / 当前状态
 
@@ -37,7 +37,7 @@ DATABASE_URL=sqlite:///./eval_platform.db
 首选升级路径：
 
 ```bash
-DATABASE_URL=postgresql+psycopg://user:password@localhost:5432/ai_eval_platform
+DATABASE_URL=postgresql+psycopg://user:password@localhost:5432/eval_labs
 ```
 
 `backend/requirements.txt` 已包含 PostgreSQL 驱动：

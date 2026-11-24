@@ -115,8 +115,8 @@ def _backfill_eval_task_scenario_snapshots() -> None:
 
 
 app = FastAPI(
-    title="AI Evaluation Platform",
-    description="Backend API for the AI Evaluation Platform",
+    title="Eval Labs",
+    description="Backend API for Eval Labs",
     version="0.1.0",
     lifespan=lifespan,
 )

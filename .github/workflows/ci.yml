@@ -1,4 +1,4 @@
-name: evaluation-platform-ci
+name: eval-labs-ci
 
 on:
   push:

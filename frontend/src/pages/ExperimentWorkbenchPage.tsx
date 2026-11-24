@@ -49,7 +49,7 @@ const { Title, Text } = Typography;
 const { TextArea } = Input;
 
 const DEFAULT_TEST_INPUT = '请用三句话介绍一下 DeepSeek，并说明它适合做哪些 AI 应用测试。';
-const WORKBENCH_DRAFT_STORAGE_KEY = 'ai-eval-platform.workbenchDraft';
+const WORKBENCH_DRAFT_STORAGE_KEY = 'eval-labs.workbenchDraft';
 
 const statusColorMap: Record<string, string> = {
   pending: 'blue',

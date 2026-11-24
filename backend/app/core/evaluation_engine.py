@@ -1,5 +1,5 @@
 """
-Evaluation engine for the AI Evaluation Platform.
+Evaluation engine for Eval Labs.
 
 The engine owns metric execution instead of depending on a specific third-party
 metric framework. LLM-based metrics use the configured OpenAI-compatible model
