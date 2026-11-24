@@ -1,3 +1,4 @@
+import asyncio
 from types import SimpleNamespace
 
 
@@ -35,3 +36,42 @@ def test_calibration_variance_measures_repeats_within_each_sample(client, monkey
     assert payload["score_variance"] == 0.013333
     assert [item["repeat_score_variance"] for item in payload["samples"]] == [0.026667, 0.0]
     assert [item["attempted_requests"] for item in payload["samples"]] == [3, 3]
+
+
+def test_judge_client_records_successful_token_usage_and_json_fallback(monkeypatch):
+    import openai
+
+    responses = iter([
+        RuntimeError("response format unsupported"),
+        SimpleNamespace(
+            choices=[SimpleNamespace(message=SimpleNamespace(content='{"score":0.8,"reason":"supported"}'))],
+            usage=SimpleNamespace(prompt_tokens=120, completion_tokens=14, total_tokens=134),
+        ),
+    ])
+
+    class FakeCompletions:
+        async def create(self, **_kwargs):
+            response = next(responses)
+            if isinstance(response, Exception):
+                raise response
+            return response
+
+    class FakeAsyncOpenAI:
+        def __init__(self, **_kwargs):
+            self.chat = SimpleNamespace(completions=FakeCompletions())
+
+    monkeypatch.setattr(openai, "AsyncOpenAI", FakeAsyncOpenAI)
+    from app.core.evaluation_engine import OpenAIJudgeClient
+
+    judge = OpenAIJudgeClient(SimpleNamespace(
+        model_name="test-model",
+        temperature=0,
+        max_tokens=32,
+        api_base_url="https://example.invalid/v1",
+        api_key="test-only",
+    ))
+    parsed = asyncio.run(judge.judge_json({"sample": "fixture"}))
+
+    assert parsed == {"score": 0.8, "reason": "supported"}
+    assert judge.last_create_attempts == 2
+    assert judge.last_usage == {"input_tokens": 120, "output_tokens": 14, "total_tokens": 134}

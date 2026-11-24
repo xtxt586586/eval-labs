@@ -1,0 +1,66 @@
+{
+  "dataset_name": "Eval Labs RAG Judge 示例对比集",
+  "dataset_version": 1,
+  "annotation_status": "illustrative_rubric_not_human_annotated",
+  "score_scale": {
+    "range": [0.0, 1.0],
+    "meaning": "0 = 与参考事实冲突或没有支持；0.5 = 部分正确但遗漏关键内容；0.75 = 基本正确但有轻微遗漏；1 = 完整且有证据支持"
+  },
+  "examples": [
+    {
+      "id": "rag-01-complete",
+      "sample": {
+        "user_input": "SQLite 是客户端服务器数据库吗？",
+        "reference": "SQLite 是嵌入式、无独立服务器进程的关系型数据库。",
+        "retrieved_contexts": ["SQLite 是嵌入式关系型数据库，应用程序通过进程内库直接读写数据库文件。它不需要独立数据库服务器。"],
+        "response": "SQLite 是嵌入式关系型数据库，应用进程通过库直接访问数据库文件，不需要单独运行数据库服务器。"
+      },
+      "reference_score": 1.0,
+      "annotation_rationale": "回答覆盖参考答案的两个关键点：嵌入式、无需独立服务器；检索上下文直接支持两点。"
+    },
+    {
+      "id": "rag-02-contradiction",
+      "sample": {
+        "user_input": "Redis 是否必须依赖磁盘才能工作？",
+        "reference": "Redis 是以内存为主的数据存储，也可配置持久化；磁盘持久化不是其运行的必需条件。",
+        "retrieved_contexts": ["Redis 将数据主要保存在内存中，并提供 RDB 和 AOF 等可选持久化机制。"],
+        "response": "是的，Redis 必须把全部数据写入磁盘后才能提供服务。"
+      },
+      "reference_score": 0.0,
+      "annotation_rationale": "回答把可选持久化错误表述为运行必需条件，并与参考结论相反。"
+    },
+    {
+      "id": "rag-03-partial",
+      "sample": {
+        "user_input": "HTTP 401 和 403 分别代表什么？",
+        "reference": "401 表示请求缺少有效身份认证凭据；403 表示服务器理解请求但拒绝授权访问。",
+        "retrieved_contexts": ["401 Unauthorized 与认证凭据有关。403 Forbidden 表示服务器拒绝执行该请求。"],
+        "response": "401 表示没有通过认证。"
+      },
+      "reference_score": 0.5,
+      "annotation_rationale": "401 部分解释正确，但完全遗漏问题另一半的 403 授权拒绝语义。"
+    },
+    {
+      "id": "rag-04-minor-omission",
+      "sample": {
+        "user_input": "Python 的字典从 3.7 起有什么顺序保证？",
+        "reference": "Python 3.7 起，字典保持插入顺序；CPython 3.6 中该行为只是实现细节。",
+        "retrieved_contexts": ["从 Python 3.7 起，字典插入顺序成为语言规范保证。CPython 3.6 已保留插入顺序，但当时属于实现细节。"],
+        "response": "从 Python 3.7 开始，字典会按照键插入的顺序迭代。"
+      },
+      "reference_score": 0.75,
+      "annotation_rationale": "核心版本边界和顺序保证正确，但省略 CPython 3.6 的历史限定。"
+    },
+    {
+      "id": "rag-05-evidence-gap",
+      "sample": {
+        "user_input": "PostgreSQL 的 MVCC 是否意味着完全不会发生锁等待？",
+        "reference": "MVCC 可减少读写之间的阻塞，但 PostgreSQL 仍有锁；DDL、显式锁及并发写冲突仍可能等待。",
+        "retrieved_contexts": ["PostgreSQL 使用 MVCC 管理并发，并通过锁协调事务和对象访问。某些 DDL 操作需要取得表级锁。"],
+        "response": "是，PostgreSQL 使用 MVCC，所以任何查询和写入都永远不会等待锁。"
+      },
+      "reference_score": 0.0,
+      "annotation_rationale": "绝对化结论与参考事实冲突；检索内容明确说明锁仍用于协调访问。"
+    }
+  ]
+}

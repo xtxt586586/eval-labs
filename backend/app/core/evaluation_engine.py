@@ -67,6 +67,8 @@ class OpenAIJudgeClient:
         self.max_tokens = min(int(llm_config.max_tokens or 1024), 1200)
         self.last_messages: list[dict[str, str]] | None = None
         self.last_raw_response: str | None = None
+        self.last_usage: dict[str, int] | None = None
+        self.last_create_attempts = 0
         self.client = AsyncOpenAI(
             base_url=llm_config.api_base_url,
             api_key=llm_config.api_key,
@@ -82,12 +84,15 @@ class OpenAIJudgeClient:
         ]
         self.last_messages = messages
         self.last_raw_response = None
+        self.last_usage = None
+        self.last_create_attempts = 0
         logger.info(
             "========== JUDGE_PROMPT_BEGIN ==========\n%s\n========== JUDGE_PROMPT_END ==========",
             json.dumps(messages, ensure_ascii=False, indent=2),
         )
 
         try:
+            self.last_create_attempts += 1
             response = await self.client.chat.completions.create(
                 model=self.model,
                 messages=messages,
@@ -97,6 +102,7 @@ class OpenAIJudgeClient:
             )
         except Exception as exc:
             logger.warning("Judge JSON mode failed, retrying without response_format: %s", exc)
+            self.last_create_attempts += 1
             response = await self.client.chat.completions.create(
                 model=self.model,
                 messages=messages,
@@ -106,6 +112,13 @@ class OpenAIJudgeClient:
 
         content = response.choices[0].message.content or ""
         self.last_raw_response = content
+        usage = getattr(response, "usage", None)
+        if usage is not None:
+            self.last_usage = {
+                "input_tokens": int(getattr(usage, "prompt_tokens", 0) or 0),
+                "output_tokens": int(getattr(usage, "completion_tokens", 0) or 0),
+                "total_tokens": int(getattr(usage, "total_tokens", 0) or 0),
+            }
         return _parse_json_object(content)
 
 
